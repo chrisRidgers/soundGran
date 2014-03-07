@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 
 	if(argc!=ARGC)
 	{
-		printf("Please use wav2aif as: wav2aif INPUT_WAV OUTPUT_AIF\n");
+		printf("Please use wav2aif as: wav2aif INPUT_WAV OUTPUT_AIF DURATION GRAINDURATION\n");
 		return 1;
 	}
 
