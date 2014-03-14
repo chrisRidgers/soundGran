@@ -1,14 +1,16 @@
-INCLUDE= -I include/
+COMPILE= -c -I include/
 LIB = -L lib/
+LIBS= -lportsf
+GCC=gcc
 
 
 default: lib/libportsf.a v6c13.o v6c13.out
 
 v6c13.out: v6c13.o
-	gcc $(LIB) -l portsf -o v6c13.out v6c13.o 
+	$(GCC) $(LIB) $(LIBS) -o v6c13.out v6c13.o 
 
 v6c13.o: v6c13.c
-	gcc -c $(INCLUDE) v6c13.c -o v6c13.o
+	$(GCC) $(COMPILE) -o v6c13.o v6c13.c 
 
 lib/libportsf.a:
 	make -C portsf install
