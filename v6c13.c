@@ -110,7 +110,9 @@ int main(int argc, char *argv[])
     printf("finishedWriting\n");
 
     free(grain);
+    printf("Memory freed\n");
   }
+    printf("loop ended\n");
 
   /*
      printf("Writing %s ... \n", argv[ARG_OUTPUT]);
