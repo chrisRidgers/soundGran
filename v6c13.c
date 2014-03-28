@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 
     for(int i=0; i<grainDecay; i++)
     {
-	    //decayStart[i] = factor * decayStart[i];
+	    decayStart[i] = factor * decayStart[i];
 	    factor -= increment;
 	    printf("decay\n");
     }
