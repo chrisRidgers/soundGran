@@ -96,22 +96,23 @@ int main(int argc, char *argv[])
 	    printf("Attack\n");
     }
 
-    float *decayStart = grain+(numFrames-grainDecay);
+    float *decayStart = grain+(numFrames-grainDecay-1);
 
     factor = 1.0;
     increment = 1.0/grainDecay;
-/*
+
     for(int i=0; i<grainDecay; i++)
     {
-	    decayStart[i] = factor * decayStart[i];
+	    //decayStart[i] = factor * decayStart[i];
 	    factor -= increment;
 	    printf("decay\n");
     }
-	    printf("finishedDecay\n");
-*/
+    printf("finishedDecay\n");
+
 
     psf_sndWriteFloatFrames(outfile, grain, numFrames);
     //Write grain to output 
+    printf("finishedWriting\n");
 
     free(grain);
   }
