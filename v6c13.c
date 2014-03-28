@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     //calculate maximum seek position
     long seekOffset = maxSeek*rand()/RAND_MAX;
     //calculate random seek position within range defined by maxSeek
-    psf_sndSeek(infile, seekOffset, PSF_SEEK_CUR);
+    psf_sndSeek(infile, seekOffset, PSF_SEEK_SET);
     //sets seek of input file
     
     psf_sndReadFloatFrames(infile, grain, numFrames);
