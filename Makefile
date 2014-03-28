@@ -6,6 +6,9 @@ GCC=gcc
 
 default: lib/libportsf.a v6c13.o v6c13.out
 
+debug:COMPILE+= -g
+debug: lib/libportsf.a v6c13.o v6c13.out
+
 v6c13.out: v6c13.o
 	$(GCC) $(LIB) $(LIBS) -o v6c13.out v6c13.o 
 

@@ -92,8 +92,6 @@ int main(int argc, char *argv[])
     {
 	    grain[i] = factor*grain[i];
 	    factor+=increment;
-
-	    printf("Attack\n");
     }
 
     float *decayStart = grain+(numFrames-grainDecay-1);
@@ -103,12 +101,9 @@ int main(int argc, char *argv[])
 
     for(int i=0; i<grainDecay; i++)
     {
-	    //decayStart[i] = factor * decayStart[i];
+	    decayStart[i] = factor * decayStart[i];
 	    factor -= increment;
-	    printf("decay\n");
     }
-    printf("finishedDecay\n");
-
 
     psf_sndWriteFloatFrames(outfile, grain, numFrames);
     //Write grain to output 
