@@ -3,7 +3,7 @@
 #include <math.h>
 #include <portsf.h>
 
-enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MAX_GRAINDUR, ARGC};
+enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MIN_GRAINDUR, ARG_MAX_GRAINDUR, ARG_GRAIN_ATTACK, ARG_GRAIN_DECAY, ARGC};
 
 int main(int argc, char *argv[])
 {
@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
   
   float grainDur;
   //Length of a grain - Determined using minGrainDur and maxGrainDur
-  float minGrainDur = 0.2f;
+  float minGrainDur;
   float maxGrainDur;
   
   float *grain;
@@ -28,12 +28,13 @@ int main(int argc, char *argv[])
 
   if(argc!=ARGC)
   {
-    printf("Please use v6c13.out as: v6c13.out INPUT_WAV OUTPUT_WAV OUTPUT_DURATION(seconds) MAXGRAINDURATION(seconds)\n");
+    printf("Please use v6c13.out as: v6c13.out INPUT_WAV OUTPUT_WAV OUTPUT_DURATION(seconds) MINGRAINDURATION(seconds) MAXGRAINDURATION(seconds) GRAINATTACKDURATION(percent) GRAINDECAYDURATION(percent)\n");
     return 1;
   }
 
   duration = atof(argv[ARG_DUR]);
   maxGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
+  minGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
  
   //Initialisation of psf library
   if(psf_init())
@@ -59,7 +60,7 @@ int main(int argc, char *argv[])
 
   for(float totalDur = 0.0f; totalDur < duration; totalDur += grainDur)
   {
-    //grainDur  = (float)(minGrainDur+(maxGrainDur-minGrainDur))*rand()/RAND_MAX;
+    //grainDur  = (float)(minGrainDur+(maxGrainDur-minGrainDur))*(float)rand()/RAND_MAX;
     grainDur  = (float)(maxGrainDur)*rand()/RAND_MAX;
     //Calculate grainDur using minGrainDur and maxGrainDur
     numFrames = (long)(grainDur*props.srate);
@@ -76,6 +77,38 @@ int main(int argc, char *argv[])
     
     psf_sndReadFloatFrames(infile, grain, numFrames);
     //Read grain into grain from input
+
+    int grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
+    int grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
+    //Stores perecentage of grain to be used for attack and delay
+
+    long grainAttack = 20;
+    long grainDecay = 20;
+
+    float factor = 0.0;
+    float increment = 1.0/grainAttack;
+
+    for(int i=0; i<grainAttack; i++)
+    {
+	    grain[i] = factor*grain[i];
+	    factor+=increment;
+
+	    printf("Attack\n");
+    }
+
+    float *decayStart = grain+(numFrames-grainDecay);
+
+    factor = 1.0;
+    increment = 1.0/grainDecay;
+/*
+    for(int i=0; i<grainDecay; i++)
+    {
+	    decayStart[i] = factor * decayStart[i];
+	    factor -= increment;
+	    printf("decay\n");
+    }
+	    printf("finishedDecay\n");
+*/
 
     psf_sndWriteFloatFrames(outfile, grain, numFrames);
     //Write grain to output 
