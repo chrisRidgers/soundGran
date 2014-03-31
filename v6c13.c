@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
   int outfile;
   //To test that PSF opens files successfully
   
-  long numFrames;
+  int numFrames;
 
   float duration;
   //Length of output file in seconds
@@ -34,8 +34,12 @@ int main(int argc, char *argv[])
 
   duration = atof(argv[ARG_DUR]);
   maxGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
-  minGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
+  minGrainDur = atof(argv[ARG_MIN_GRAINDUR]);
  
+    int grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
+    int grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
+    //Stores perecentage of grain to be used for attack and delay
+
   //Initialisation of psf library
   if(psf_init())
   {
@@ -60,27 +64,29 @@ int main(int argc, char *argv[])
 
   for(float totalDur = 0.0f; totalDur < duration; totalDur += grainDur)
   {
-    //grainDur  = (float)(minGrainDur+(maxGrainDur-minGrainDur))*(float)rand()/RAND_MAX;
-    grainDur  = (float)(maxGrainDur)*rand()/RAND_MAX;
+    grainDur  = minGrainDur+((float)(maxGrainDur-minGrainDur)*rand())/RAND_MAX;
+    //grainDur  = (float)(maxGrainDur)*rand()/RAND_MAX;
     //Calculate grainDur using minGrainDur and maxGrainDur
-    numFrames = (long)(grainDur*props.srate);
+    numFrames = grainDur*props.srate;
     //Calculate numFrames based on props sample rate
     grain = (float*)malloc(numFrames*props.chans*sizeof(float));
     //Allocate buffer for grain
     
-    long maxSeek = psf_sndSize(infile)-numFrames;
+    int maxSeek = psf_sndSize(infile)-numFrames;
     //calculate maximum seek position
-    long seekOffset = maxSeek*rand()/RAND_MAX;
+    int seekOffset = ((float)maxSeek*rand())/RAND_MAX;
     //calculate random seek position within range defined by maxSeek
     psf_sndSeek(infile, seekOffset, PSF_SEEK_SET);
     //sets seek of input file
+
+printf("Seek offset %d\t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
+
+
+
+
     
     psf_sndReadFloatFrames(infile, grain, numFrames);
     //Read grain into grain from input
-
-    int grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
-    int grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
-    //Stores perecentage of grain to be used for attack and delay
 
     long grainAttack = 20;
     long grainDecay = 20;
@@ -94,7 +100,7 @@ int main(int argc, char *argv[])
 	    factor+=increment;
     }
 
-    float *decayStart = grain+(numFrames-grainDecay-1);
+    float *decayStart = grain+(numFrames-grainDecay);
 
     factor = 1.0;
     increment = 1.0/grainDecay;
