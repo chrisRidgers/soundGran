@@ -81,15 +81,11 @@ int main(int argc, char *argv[])
 
 		printf("Seek offset %d\t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
 
-
-
-
-
 		psf_sndReadFloatFrames(infile, grain, numFrames);
 		//Read grain into grain from input
 
-		long grainAttack = 20;
-		long grainDecay = 20;
+		long grainAttack = grainAttackPercent*numFrames/100.0;
+		long grainDecay = grainDecayPercent*numFrames/100.0;
 
 		float factor = 0.0;
 		float increment = 1.0/grainAttack;
@@ -111,7 +107,11 @@ int main(int argc, char *argv[])
 			factor -= increment;
 		}
 
-		psf_sndWriteFloatFrames(outfile, grain, numFrames);
+		if(psf_sndWriteFloatFrames(outfile, grain, numFrames) != numFrames)
+		{
+			printf("Warning: error writing %s\n", argv[ARG_OUTPUT]);
+			return 1;
+		}
 		//Write grain to output 
 		printf("finishedWriting\n");
 
