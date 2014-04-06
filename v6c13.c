@@ -10,30 +10,28 @@ int closePSF(int *infile, int *outfile, char **argv);
 int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, char **argv);
 int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *props);
 int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset);
-int impAttackEnv(int *grainAttackPercent, int *numFrames, float **grain);
-int impDecayEnv(int *grainDecayPercent, int *numFrames, float **grain);
+int impAttackEnv(int *grainAttackPercent, int *numFrames, float *grain);
+int impDecayEnv(int *grainDecayPercent, int *numFrames, float *grain);
 
 int main(int argc, char *argv[])
 {
   PSF_PROPS props;
 
   int infile;
-  int outfile;//To test that PSF opens files successfully 
+  int outfile;			//To test that PSF opens files successfully 
 
   float minGrainDur;
   float maxGrainDur;
-  float duration; //Length of output file in seconds 
+  float duration; 		//Length of output file in seconds 
   int grainAttackPercent;
-  int grainDecayPercent;//Stores perecentage of grain to be used for attack and delay 
+  int grainDecayPercent;	//Stores perecentage of grain to be used for attack and delay 
 
   int maxSeek;
   int seekOffset;
 
-
-  float grainDur;//Length of a grain - Determined using minGrainDur and maxGrainDur 
+  float grainDur;		//Length of a grain - Determined using minGrainDur and maxGrainDur 
   int numFrames;
-  float *grain;
-  //Buffer to store individual grain
+  float *grain;			//Buffer to store individual grain 
 
   if(argc!=ARGC)
   {
@@ -48,36 +46,11 @@ int main(int argc, char *argv[])
   {
     allocateGrainMem(&grainDur, &minGrainDur, &maxGrainDur, &numFrames, &grain, &props);
     setupSeek(&infile, &numFrames, &maxSeek, &seekOffset);
-    psf_sndSeek(infile, seekOffset, PSF_SEEK_SET);//sets seek of input file 
+    psf_sndSeek(infile, seekOffset, PSF_SEEK_SET);						//sets seek of input file 
+    psf_sndReadFloatFrames(infile, grain, numFrames);						//Read grain into grain from input 
+    impAttackEnv(&grainAttackPercent, &numFrames, grain);
+    impDecayEnv(&grainDecayPercent, &numFrames, grain);
     //printf("Seek offset %d\t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
-    psf_sndReadFloatFrames(infile, grain, numFrames);//Read grain into grain from input 
-    impAttackEnv(&grainAttackPercent, &numFrames, &grain);
-    impDecayEnv(&grainDecayPercent, &numFrames, &grain);
-
-
-    //long grainDecay = grainDecayPercent*numFrames/100.0;
-    /*
-    float factor = 0.0;
-    float increment = 1.0/grainAttack;
-
-    for(int i=0; i<grainAttack; i++)
-    {
-      grain[i] = factor*grain[i];
-      factor+=increment;
-    }
-    
-
-    float *decayStart = grain+(numFrames-grainDecay);
-
-    factor = 1.0;
-    increment = 1.0/grainDecay;
-
-    for(int i=0; i<grainDecay; i++)
-    {
-      decayStart[i] = factor * decayStart[i];
-      factor -= increment;
-    }
-    */
 
     if(psf_sndWriteFloatFrames(outfile, grain, numFrames) != numFrames)
     {
@@ -140,7 +113,6 @@ int intialisePSF(int *infile, int *outfile, PSF_PROPS *props, char **argv)
     printf("Error, unable to create %s\n", argv[ARG_OUTPUT]);
     return 1;
   }
-  //End psf library initialisation
   return 0;
 }
 
@@ -151,64 +123,53 @@ int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int 
   *minGrainDur = atof(argv[ARG_MIN_GRAINDUR]);
   *grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
   *grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
-
   printf("*duration: \t %f \t *maxGrainDur \t %f \t *minGrainDur \t %f \t \n", *duration, *maxGrainDur, *minGrainDur);
   return 0;
 }
 
 int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *props)
 {
-  *grainDur  = *minGrainDur+((float)(*maxGrainDur-*minGrainDur)*rand())/RAND_MAX;
-  //Calculate grainDur using minGrainDur and maxGrainDur
-  *numFrames = (int)(*grainDur*props->srate);
+  *grainDur  = *minGrainDur+((float)(*maxGrainDur-*minGrainDur)*rand())/RAND_MAX;		//Calculate grainDur using minGrainDur and maxGrainDur 
+  *numFrames = (int)(*grainDur*props->srate);							//Calculate numFrames based on props sample rate 
+  *grain = (float*)malloc(*numFrames*props->chans*sizeof(float));				//Allocate buffer for grain 
   //printf("*TEMPVALUE: \t %d \t *props->srate: \t %d \t *grainDur: \t %f \t *minGrainDur \t %f \t *maxGrainDur \t %f \t *numFrames:\t %d \n", (int)(((int)*grainDur)*(props->srate)), props->srate, *grainDur, *minGrainDur, *maxGrainDur, *numFrames);
-  //Calculate numFrames based on props sample rate
-  *grain = (float*)malloc(*numFrames*props->chans*sizeof(float));
-  //Allocate buffer for grain
   return 0;
 }
 
 int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset)
 {
-  *maxSeek = psf_sndSize(*infile)-*numFrames;
-  //calculate maximum seek position
-  *seekOffset = ((float)*maxSeek*rand())/RAND_MAX;
-  //calculate random seek position within range defined by maxSeek
-  //
-
+  *maxSeek = psf_sndSize(*infile)-*numFrames;							//calculate maximum seek position 
+  *seekOffset = ((float)*maxSeek*rand())/RAND_MAX;						//calculate random seek position 
   printf("*maxSeek: \t %d \t *seekOffset \t %d \t \n", *maxSeek, *seekOffset);
   return 0;
 }
 
-int impAttackEnv(int *grainAttackPercent, int *numFrames, float **grain)
+int impAttackEnv(int *grainAttackPercent, int *numFrames, float *grain)
 {
-    long grainAttack = (*grainAttackPercent)*(*numFrames)/100.0;
-    float factor = 0.0;
-    float increment = 1.0/grainAttack;
+  long grainAttack = (*grainAttackPercent)*(*numFrames)/100.0;
+  float factor = 0.0;
+  float increment = 1.0/grainAttack;
 
-    for(int i=0; i<grainAttack; i++)
-    {
-      *grain[i] = factor*(*grain[i]);
-      factor+=increment;
-    }
+  for(int i=0; i<grainAttack; i++)
+  {
+    grain[i] = factor*grain[i];
+    factor+=increment;
+  }
   return 0;
 }
 
-int impDecayEnv(int *grainDecayPercent, int *numFrames, float **grain)
+int impDecayEnv(int *grainDecayPercent, int *numFrames, float *grain)
 {
-    long grainDecay = (*grainDecayPercent)*(*numFrames)/100.0;
-    float *decayStart = (*grain)+((*numFrames)-grainDecay);
+  long grainDecay = (*grainDecayPercent)*(*numFrames)/100.0;
+  float *decayStart = grain+((*numFrames)-grainDecay);
 
-    float factor = 1.0;
-    float increment = 1.0/grainDecay;
+  float factor = 1.0;
+  float increment = 1.0/grainDecay;
 
-    for(int i=0; i<grainDecay; i++)
-    {
-      decayStart[i] = factor * decayStart[i];
-      factor -= increment;
-    }
-    
+  for(int i=0; i<grainDecay; i++)
+  {
+    decayStart[i] = factor * decayStart[i];
+    factor -= increment;
+  }
   return 0;
 }
-
-
