@@ -5,6 +5,8 @@
 
 enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MIN_GRAINDUR, ARG_MAX_GRAINDUR, ARG_GRAIN_ATTACK, ARG_GRAIN_DECAY, ARGC};
 
+int intialisePSF(int *infile, int *outfile, PSF_PROPS *props, char **argv);
+int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, char **argv);
 int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *props);
 
 int main(int argc, char *argv[])
@@ -12,19 +14,16 @@ int main(int argc, char *argv[])
   PSF_PROPS props;
 
   int infile;
-  int outfile;
-  //To test that PSF opens files successfully
-
-  int numFrames;
-
-  float duration;
-  //Length of output file in seconds
-
-  float grainDur;
-  //Length of a grain - Determined using minGrainDur and maxGrainDur
+  int outfile;//To test that PSF opens files successfully 
+  
   float minGrainDur;
   float maxGrainDur;
+  float duration; //Length of output file in seconds 
+  int grainAttackPercent;
+  int grainDecayPercent;//Stores perecentage of grain to be used for attack and delay 
 
+  float grainDur;//Length of a grain - Determined using minGrainDur and maxGrainDur 
+  int numFrames;
   float *grain;
   //Buffer to store individual grain
 
@@ -33,15 +32,15 @@ int main(int argc, char *argv[])
     printf("Please use v6c13.out as: v6c13.out INPUT_WAV OUTPUT_WAV OUTPUT_DURATION(seconds) MINGRAINDURATION(seconds) MAXGRAINDURATION(seconds) GRAINATTACKDURATION(percent) GRAINDECAYDURATION(percent)\n");
     return 1;
   }
+  setupVariables(&duration, &minGrainDur, &maxGrainDur, &grainAttackPercent, &grainDecayPercent, argv);
 
+  /*
   duration = atof(argv[ARG_DUR]);
   maxGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
   minGrainDur = atof(argv[ARG_MIN_GRAINDUR]);
+  */
 
-  int grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
-  int grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
-  //Stores perecentage of grain to be used for attack and delay
-
+                                         /*
   //Initialisation of psf library
   if(psf_init())
   {
@@ -63,6 +62,9 @@ int main(int argc, char *argv[])
     return 1;
   }
   //End psf library initialisation
+  */
+
+  intialisePSF(&infile, &outfile, &props, argv);
 
   for(float totalDur = 0.0f; totalDur < duration; totalDur += grainDur)
   {
@@ -119,10 +121,10 @@ int main(int argc, char *argv[])
       return 1;
     }
     //Write grain to output 
-    printf("finishedWriting\n");
+    //printf("finishedWriting\n");
 
     free(grain);
-    printf("Memory freed\n");
+    //printf("Memory freed\n");
   }
   printf("loop ended\n");
 
@@ -153,6 +155,43 @@ int main(int argc, char *argv[])
 
   psf_finish();
 
+  return 0;
+}
+
+int intialisePSF(int *infile, int *outfile, PSF_PROPS *props, char **argv)
+{
+  if(psf_init())
+  {
+    printf("Error: unable to open portsf\n");
+    return 1;
+  }
+
+  *infile = psf_sndOpen(argv[ARG_INPUT], props, 0);
+  if(*infile<0)
+  {
+    printf("Error, unable to read %s\n", argv[ARG_INPUT]);
+    return 1;
+  }
+
+  *outfile = psf_sndCreate(argv[ARG_OUTPUT], props, 0, 0, PSF_CREATE_RDWR);
+  if(*outfile<0)
+  {
+    printf("Error, unable to create %s\n", argv[ARG_OUTPUT]);
+    return 1;
+  }
+  //End psf library initialisation
+  return 0;
+}
+
+int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, char **argv)
+{
+  *duration = atof(argv[ARG_DUR]);
+  *maxGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
+  *minGrainDur = atof(argv[ARG_MIN_GRAINDUR]);
+  *grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
+  *grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
+
+  printf("*duration: \t %f \t *maxGrainDur \t %f \t *minGrainDur \t %f \t \n", *duration, *maxGrainDur, *minGrainDur);
   return 0;
 }
 
