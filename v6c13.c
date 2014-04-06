@@ -162,8 +162,8 @@ int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, in
   //Calculate grainDur using minGrainDur and maxGrainDur
   //float tempA = *grainDur;
   //double tempB = props->srate;
-  //*numFrames = (int)*grainDur*props->srate;
-  *numFrames =(int)(((int)*grainDur)*(props->srate));
+  *numFrames = (int)(*grainDur*props->srate);
+  //*numFrames =(int)(((int)*grainDur)*(props->srate));
   //*numFrames = (int)tempA*tempB;
   printf("*TEMPVALUE: \t %d \t *props->srate: \t %d \t *grainDur: \t %f \t *minGrainDur \t %f \t *maxGrainDur \t %f \t *numFrames:\t %d \n", (int)(((int)*grainDur)*(props->srate)), props->srate, *grainDur, *minGrainDur, *maxGrainDur, *numFrames);
   //Calculate numFrames based on props sample rate
