@@ -9,6 +9,7 @@ int intialisePSF(int *infile, int *outfile, PSF_PROPS *props, char **argv);
 int closePSF(int *infile, int *outfile, char **argv);
 int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, char **argv);
 int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *props);
+int allocateOutputMem(float *duration, int *outputNumFrames, float **output, PSF_PROPS *props);
 int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset);
 int impAttackEnv(int *grainAttackPercent, int *numFrames, float *grain);
 int impDecayEnv(int *grainDecayPercent, int *numFrames, float *grain);
@@ -20,18 +21,23 @@ int main(int argc, char *argv[])
   int infile;
   int outfile;			//To test that PSF opens files successfully 
 
+  float duration; 		//Length of output file in seconds 
+  int outputNumFrames;
+  float *output;
+
   float minGrainDur;
   float maxGrainDur;
-  float duration; 		//Length of output file in seconds 
+  float grainDur;		//Length of a grain - Determined using minGrainDur and maxGrainDur 
+  int numFrames;
+  int stepSize=0;
+  float *grain;			//Buffer to store individual grain 
+
   int grainAttackPercent;
   int grainDecayPercent;	//Stores perecentage of grain to be used for attack and delay 
 
   int maxSeek;
   int seekOffset;
 
-  float grainDur;		//Length of a grain - Determined using minGrainDur and maxGrainDur 
-  int numFrames;
-  float *grain;			//Buffer to store individual grain 
 
   if(argc!=ARGC)
   {
@@ -41,6 +47,7 @@ int main(int argc, char *argv[])
 
   setupVariables(&duration, &minGrainDur, &maxGrainDur, &grainAttackPercent, &grainDecayPercent, argv);
   intialisePSF(&infile, &outfile, &props, argv);
+  allocateOutputMem(&duration, &outputNumFrames, &output, &props);
 
   for(float totalDur = 0.0f; totalDur < duration; totalDur += grainDur)
   {
@@ -51,19 +58,25 @@ int main(int argc, char *argv[])
     impAttackEnv(&grainAttackPercent, &numFrames, grain);
     impDecayEnv(&grainDecayPercent, &numFrames, grain);
     //printf("Seek offset %d\t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
-
-    if(psf_sndWriteFloatFrames(outfile, grain, numFrames) != numFrames)
+    
+    float *test = output + stepSize;
+    for(int i = 0; i < numFrames && grainDur < duration - totalDur; i++)
     {
-      printf("Warning: error writing %s\n", argv[ARG_OUTPUT]);
-      return 1;
+      test[i] = grain[i];
+      printf("frame: %d \t numFrames: %d \t outputNumFrames: %d \t \n",i, numFrames, outputNumFrames);
     }
-    //Write grain to output 
-    //printf("finishedWriting\n");
-
+    stepSize += numFrames;
     free(grain);
     //printf("Memory freed\n");
   }
   printf("loop ended\n");
+
+  if(psf_sndWriteFloatFrames(outfile, output, outputNumFrames) != outputNumFrames)
+  {
+    printf("Warning: error writing %s\n", argv[ARG_OUTPUT]);
+    return 1;
+  }
+  //printf("finishedWriting\n");
 
   closePSF(&infile, &outfile, argv);
 
@@ -124,6 +137,13 @@ int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int 
   *grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
   *grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
   printf("*duration: \t %f \t *maxGrainDur \t %f \t *minGrainDur \t %f \t \n", *duration, *maxGrainDur, *minGrainDur);
+  return 0;
+}
+
+int allocateOutputMem(float *duration, int *outputNumFrames, float **output, PSF_PROPS *props)
+{
+  *outputNumFrames = (int)(*duration)*props->srate;
+  *output = (float*)calloc(1, (*outputNumFrames)*props->chans*sizeof(float));
   return 0;
 }
 
