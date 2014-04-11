@@ -18,6 +18,8 @@ int main(int argc, char *argv[])
 {
   PSF_PROPS props;
 
+  int spaceLeft=1;
+
   int infile;
   int outfile;			//To test that PSF opens files successfully 
 
