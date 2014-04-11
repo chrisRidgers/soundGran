@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
   setupVariables(&duration, &minGrainDur, &maxGrainDur, &grainAttackPercent, &grainDecayPercent, &grainDensity, &stepSize, &props, argv);
   allocateOutputMem(&duration, &outputNumFrames, &output, &props);
 
-  for(float totalDur = 0.0f; totalDur < duration; totalDur += grainDur)
+  while(spaceLeft)
   {
     allocateGrainMem(&grainDur, &minGrainDur, &maxGrainDur, &numFrames, &grain, &props);
     setupSeek(&infile, &numFrames, &maxSeek, &seekOffset);
@@ -63,17 +63,21 @@ int main(int argc, char *argv[])
     impDecayEnv(&grainDecayPercent, &numFrames, grain);
     //printf("Seek offset %d\t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
     
-    float *grainStart = output + step;
-    for(int i = 0; i < numFrames && grainDur < duration - totalDur; i++)
+    if(outputNumFrames - step > numFrames)
     {
-      if(outputNumFrames - stepSize > numFrames)
+      spaceLeft = 1;
+      float *grainStart = output + step;
+      for(int i = 0; i < numFrames; i++)
       {
-      printf("outputNumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
-      grainStart[i] = grain[i];
-      //printf("frame: %d \t numFrames: %d \t outputNumFrames: %d \t \n",i, numFrames, outputNumFrames);
+	//printf("outputNumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
+	grainStart[i] = grain[i];
+	//printf("frame: %d \t numFrames: %d \t outputNumFrames: %d \t \n",i, numFrames, outputNumFrames);
       }
+      step += stepSize;
+    } else
+    {
+      spaceLeft = 0;
     }
-    step += stepSize;
     free(grain);
     //printf("Memory freed\n");
   }
@@ -85,7 +89,7 @@ int main(int argc, char *argv[])
     return 1;
   }
   //printf("finishedWriting\n");
-  
+
   free(output);
 
   closePSF(&infile, &outfile, argv);
