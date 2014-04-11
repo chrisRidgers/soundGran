@@ -3,11 +3,11 @@
 #include <math.h>
 #include <portsf.h>
 
-enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MIN_GRAINDUR, ARG_MAX_GRAINDUR, ARG_GRAIN_ATTACK, ARG_GRAIN_DECAY, ARGC};
+enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MIN_GRAINDUR, ARG_MAX_GRAINDUR, ARG_GRAIN_ATTACK, ARG_GRAIN_DECAY, ARG_GRAIN_DENSITY, ARGC};
 
 int intialisePSF(int *infile, int *outfile, PSF_PROPS *props, char **argv);
 int closePSF(int *infile, int *outfile, char **argv);
-int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, char **argv);
+int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, float *grainDensity, long *stepSize, PSF_PROPS *props, char **argv);
 int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *props);
 int allocateOutputMem(float *duration, int *outputNumFrames, float **output, PSF_PROPS *props);
 int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset);
@@ -29,7 +29,9 @@ int main(int argc, char *argv[])
   float maxGrainDur;
   float grainDur;		//Length of a grain - Determined using minGrainDur and maxGrainDur 
   int numFrames;
-  int stepSize=0;
+  float grainDensity;
+  long stepSize=0;
+  long step=0;
   float *grain;			//Buffer to store individual grain 
 
   int grainAttackPercent;
@@ -45,8 +47,8 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  setupVariables(&duration, &minGrainDur, &maxGrainDur, &grainAttackPercent, &grainDecayPercent, argv);
   intialisePSF(&infile, &outfile, &props, argv);
+  setupVariables(&duration, &minGrainDur, &maxGrainDur, &grainAttackPercent, &grainDecayPercent, &grainDensity, &stepSize, &props, argv);
   allocateOutputMem(&duration, &outputNumFrames, &output, &props);
 
   for(float totalDur = 0.0f; totalDur < duration; totalDur += grainDur)
@@ -59,13 +61,17 @@ int main(int argc, char *argv[])
     impDecayEnv(&grainDecayPercent, &numFrames, grain);
     //printf("Seek offset %d\t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
     
-    float *test = output + stepSize;
+    float *grainStart = output + step;
     for(int i = 0; i < numFrames && grainDur < duration - totalDur; i++)
     {
-      test[i] = grain[i];
-      printf("frame: %d \t numFrames: %d \t outputNumFrames: %d \t \n",i, numFrames, outputNumFrames);
+      if(outputNumFrames - stepSize > numFrames)
+      {
+      printf("outputNumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
+      grainStart[i] = grain[i];
+      //printf("frame: %d \t numFrames: %d \t outputNumFrames: %d \t \n",i, numFrames, outputNumFrames);
+      }
     }
-    stepSize += numFrames;
+    step += stepSize;
     free(grain);
     //printf("Memory freed\n");
   }
@@ -77,6 +83,8 @@ int main(int argc, char *argv[])
     return 1;
   }
   //printf("finishedWriting\n");
+  
+  free(output);
 
   closePSF(&infile, &outfile, argv);
 
@@ -129,14 +137,16 @@ int intialisePSF(int *infile, int *outfile, PSF_PROPS *props, char **argv)
   return 0;
 }
 
-int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, char **argv)
+int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, float *grainDensity, long *stepSize, PSF_PROPS *props, char **argv)
 {
   *duration = atof(argv[ARG_DUR]);
   *maxGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
   *minGrainDur = atof(argv[ARG_MIN_GRAINDUR]);
   *grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
   *grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
-  printf("*duration: \t %f \t *maxGrainDur \t %f \t *minGrainDur \t %f \t \n", *duration, *maxGrainDur, *minGrainDur);
+  *grainDensity = 1.0/atof(argv[ARG_GRAIN_DENSITY]);
+  *stepSize = (*grainDensity)*props->srate;
+  printf("*duration: \t %f \t *maxGrainDur \t %f \t *minGrainDur \t %f \t *grainDensity \t %f \t *stepSize \t %ld \t \n", *duration, *maxGrainDur, *minGrainDur, *grainDensity, *stepSize);
   return 0;
 }
 
@@ -160,7 +170,7 @@ int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset)
 {
   *maxSeek = psf_sndSize(*infile)-*numFrames;							//calculate maximum seek position 
   *seekOffset = ((float)*maxSeek*rand())/RAND_MAX;						//calculate random seek position 
-  printf("*maxSeek: \t %d \t *seekOffset \t %d \t \n", *maxSeek, *seekOffset);
+  //printf("*maxSeek: \t %d \t *seekOffset \t %d \t \n", *maxSeek, *seekOffset);
   return 0;
 }
 
