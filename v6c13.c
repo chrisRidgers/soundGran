@@ -10,6 +10,7 @@ int closePSF(int *infile, int *outfile, char **argv);
 int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, float *grainDensity, long *stepSize, PSF_PROPS *props, char **argv);
 int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *props);
 int allocateOutputMem(float *duration, int *outputNumFrames, float **output, PSF_PROPS *props);
+int setGrainX(float *grainX);
 int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset);
 int impAttackEnv(int *grainAttackPercent, int *numFrames, float *grain);
 int impDecayEnv(int *grainDecayPercent, int *numFrames, float *grain);
@@ -30,6 +31,7 @@ int main(int argc, char *argv[])
   float minGrainDur;
   float maxGrainDur;
   float grainDur;		//Length of a grain - Determined using minGrainDur and maxGrainDur 
+  float grainX;
   int numFrames;
   float grainDensity;
   long stepSize=0;
@@ -61,16 +63,19 @@ int main(int argc, char *argv[])
     psf_sndReadFloatFrames(infile, grain, numFrames);						//Read grain into grain from input 
     impAttackEnv(&grainAttackPercent, &numFrames, grain);
     impDecayEnv(&grainDecayPercent, &numFrames, grain);
-    //printf("Seek offset %d\t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
+    setGrainX(&grainX);
+    printf("Variables: \t \n \n grainDur \t %f \t numFrames \t %d \t grain(length of) \t %lu \t \n maxSeek \t %d \t seekOffset \t %d \t grainX \t %f \t \n \n duration \t %f \t outputNumFrames \t %d \t \n stepSize \t %ld \t output(length of) \t %ld \t \n \n props: \t \n \n props.chans \t %d \t \n props.srate \t %d \t \n \n (size of float = %lu ) \t \n leftChannel \t %f \t rightChannel \t %f \t channelSum \t %f \t \n \n", grainDur, numFrames, numFrames*props.chans*sizeof(float), maxSeek, seekOffset, grainX, duration, outputNumFrames, stepSize, outputNumFrames*props.chans*sizeof(float), props.chans, props.srate, sizeof(float), (sqrt(2.0)/2) * (cos(grainX)+sin(grainX)) * 0.5, (sqrt(2.0)/2) * (cos(grainX)-sin(grainX)) * 0.5, ((sqrt(2.0)/2) * (cos(grainX)+sin(grainX)) * 0.5 ) + ((sqrt(2.0)/2) * (cos(grainX)-sin(grainX)) * 0.5 ));
+    //printf("Seek offset %d \t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
     
     if(outputNumFrames - step > numFrames)
     {
       spaceLeft = 1;
-      float *grainStart = output + step;
+      float *grainStart = output + step*props.chans;
       for(int i = 0; i < numFrames; i++)
       {
 	//printf("outputNumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
-	grainStart[i] = grain[i];
+	grainStart[i] = (sqrt(2.0)/2) * (cos(grainX)+sin(grainX)) * grain[i] * 0.5;
+	grainStart[i+1] = (sqrt(2.0)/2) * (cos(grainX)-sin(grainX)) * grain[i] * 0.5;
 	//printf("frame: %d \t numFrames: %d \t outputNumFrames: %d \t \n",i, numFrames, outputNumFrames);
       }
       step += stepSize;
@@ -94,6 +99,12 @@ int main(int argc, char *argv[])
 
   closePSF(&infile, &outfile, argv);
 
+  return 0;
+}
+
+int setGrainX(float *grainX)
+{
+  *grainX = (-1.0f)+ (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
   return 0;
 }
 
@@ -134,6 +145,7 @@ int intialisePSF(int *infile, int *outfile, PSF_PROPS *props, char **argv)
     return 1;
   }
 
+  props->chans=2;
   *outfile = psf_sndCreate(argv[ARG_OUTPUT], props, 0, 0, PSF_CREATE_RDWR);
   if(*outfile<0)
   {
