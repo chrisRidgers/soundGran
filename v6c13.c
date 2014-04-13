@@ -51,10 +51,8 @@ int main(int argc, char *argv[])
       					//Pointer to first frame of grain, adjusts by stepsize each loop
       for(int i = 0; i < grain.numFrames; i++)
       {
-	//printf("NumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
 	grainStart[i] 	= (sqrt(2.0) / 2) * (cos(grain.grainX) + sin(grain.grainX)) * grain.buffer[i] * 0.5;
 	grainStart[i+1] = (sqrt(2.0) / 2) * (cos(grain.grainX) - sin(grain.grainX)) * grain.buffer[i] * 0.5;
-	//printf("frame: %d \t numFrames: %d \t NumFrames: %d \t \n",i, numFrames, outputNumFrames);
       }
 
       output.step 	+= output.stepSize;
@@ -63,7 +61,7 @@ int main(int argc, char *argv[])
     {
       global.spaceLeft 	= 0;		//Prevents loop from running once finished
     }
-    //printf("Memory freed\n");
+    
     free(grain.buffer);
     grain.bufTest 	= 0;
   }
@@ -76,7 +74,6 @@ int main(int argc, char *argv[])
     printf("Warning: error writing %s\n", global.argv[ARG_OUTPUT]);
     return 1;
   }
-  //printf("finishedWriting\n");
 
   cleanUp(				//Frees up memory buffers before programme exit
       &grain, 
@@ -86,35 +83,27 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-int setGrainX(GRAIN *grain)
-{
-  grain->grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
-
-  return 0;
-}
-
-int closePSF(
+int setupVariables(
     GRAIN *grain, 
     GRANSOUND *output, 
     GLOBAL *global)
 {
-  if(grain->inputFile >= 0)
-  {
-    if(psf_sndClose(grain->inputFile))
-    {
-      printf("Warning error closing %s\n", global->argv[ARG_INPUT]);
-    }
-  }
-  if(output->outputFile >= 0)
-  {
-    if(psf_sndClose(output->outputFile))
-    {
-      printf("Warning error closing %s\n", global->argv[ARG_OUTPUT]);
-    }
-    printf("Closed fine \n");
-  }
+  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR]);
+  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR]);
+  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK]);
+  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY]);
 
-  psf_finish();
+  output->duration 		= atof(global->argv[ARG_DUR]);
+  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY]);
+
+  initialisePSF(
+      grain, 
+      output, 
+      global);
+
+  output->stepSize 		= output->grainDensity * output->outprop.srate;
+  output->bufTest 		= 0;
+  grain->bufTest		= 0;
 
   return 0;
 }
@@ -150,31 +139,6 @@ int initialisePSF(
     printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT]);
     return 1;
   }
-
-  return 0;
-}
-
-int setupVariables(
-    GRAIN *grain, 
-    GRANSOUND *output, 
-    GLOBAL *global)
-{
-  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR]);
-  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR]);
-  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK]);
-  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY]);
-
-  output->duration 		= atof(global->argv[ARG_DUR]);
-  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY]);
-
-  initialisePSF(
-      grain, 
-      output, 
-      global);
-
-  output->stepSize 		= output->grainDensity * output->outprop.srate;
-  output->bufTest 		= 0;
-  grain->bufTest		= 0;
 
   return 0;
 }
@@ -233,6 +197,39 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
     decayStart[i] 	= factor * decayStart[i];
     factor 		-= increment;
   }
+
+  return 0;
+}
+
+int setGrainX(GRAIN *grain)
+{
+  grain->grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
+
+  return 0;
+}
+
+int closePSF(
+    GRAIN *grain, 
+    GRANSOUND *output, 
+    GLOBAL *global)
+{
+  if(grain->inputFile >= 0)
+  {
+    if(psf_sndClose(grain->inputFile))
+    {
+      printf("Warning error closing %s\n", global->argv[ARG_INPUT]);
+    }
+  }
+  if(output->outputFile >= 0)
+  {
+    if(psf_sndClose(output->outputFile))
+    {
+      printf("Warning error closing %s\n", global->argv[ARG_OUTPUT]);
+    }
+    printf("Closed fine \n");
+  }
+
+  psf_finish();
 
   return 0;
 }
