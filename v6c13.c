@@ -6,9 +6,9 @@
 
 int main(int argc, char *argv[])
 {
-  GLOBAL 	global = {1, argv};
-  GRAIN 	grain;
-  GRANSOUND 	output = {0,0};
+  GLOBAL 	global = {1, argv}; 	//Struct to hold global variables
+  GRAIN 	grain; 			//Struct to hold grain related variables
+  GRANSOUND 	output = {0,0}; 	//Struct to hold variables affecting the output buffer
 
   if(argc!=ARGC)
   {
@@ -22,38 +22,33 @@ int main(int argc, char *argv[])
       &output, 
       &global);
 
-  allocateOutputMem(&output);
+  allocateOutputMem(&output); 		//Setting up output buffer
 
   while(global.spaceLeft)
   {
-    allocateGrainMem(&grain, &global);
+    allocateGrainMem(&grain, &global); 	//Setting up grain buffer
+    setupSeek(&grain);                  //Sets random seek for input file
 
-    setupSeek(&grain);
-
-    psf_sndSeek(
+    psf_sndSeek(  			//Sets seek for input file
 	grain.inputFile, 
 	grain.seekOffset, 
-	PSF_SEEK_SET);						//sets seek of input file 
+	PSF_SEEK_SET);						
 
-    psf_sndReadFloatFrames(
+    psf_sndReadFloatFrames( 		//Reads grain into buffer
 	grain.inputFile, 
 	grain.buffer, 
-	grain.numFrames);						//Read grain into grain from input 
+	grain.numFrames);					   
 
-    impAttackEnv(
-	&grain, 
-	&global);
-
-    impDecayEnv(&grain, &global);
-
-    setGrainX(&grain);
-    //printf("Seek offset %d \t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
+    impAttackEnv(&grain, &global); 	//Applies an attack envelope to reduce clipping
+    impDecayEnv(&grain, &global);	//Applies a decay envelope to reduce clipping
+    setGrainX(&grain);			//Randomly determines a sound source position (stereo)
 
     if(output.NumFrames - output.step > grain.numFrames)
     {
-      global.spaceLeft 	= 1;
+      global.spaceLeft 	= 1;		//Just in case variable somehow becomes unset
 
       float *grainStart = output.buffer + output.step * output.outprop.chans;
+      //Pointer to first frame of grain, adjusts by stepsize each loop
       for(int i = 0; i < grain.numFrames; i++)
       {
 	//printf("NumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
@@ -62,15 +57,17 @@ int main(int argc, char *argv[])
 	//printf("frame: %d \t numFrames: %d \t NumFrames: %d \t \n",i, numFrames, outputNumFrames);
       }
 
-      output.step 	+= output.stepSize;
+      output.step 	+= output.stepSize;  //Increases step by stepsize for next grain
     } else
     {
-      global.spaceLeft 	= 0;
+      global.spaceLeft 	= 0;		//Prevents loop from running once finished
     }
     //printf("Memory freed\n");
+    free(grain.buffer);
+    grain.bufTest 	= 0;
   }
 
-  if(psf_sndWriteFloatFrames(
+  if(psf_sndWriteFloatFrames(		//Writes output buffer to file
 	output.outputFile, 
 	output.buffer, 
 	output.NumFrames) != output.NumFrames)
@@ -80,7 +77,7 @@ int main(int argc, char *argv[])
   }
   //printf("finishedWriting\n");
 
-  cleanUp(
+  cleanUp(		//Frees up memory buffers before programme exit
       &grain, 
       &output, 
       &global);
@@ -175,6 +172,8 @@ int setupVariables(
       global);
 
   output->stepSize 		= output->grainDensity * output->outprop.srate;
+  output->bufTest 		= 0;
+  grain->bufTest		= 0;
 
   return 0;
 }
@@ -183,6 +182,7 @@ int allocateOutputMem(GRANSOUND *output)
 {
   output->NumFrames 	= (int)output->duration * output->outprop.srate;
   output->buffer 	= (float*) calloc(1, output->NumFrames * output->outprop.chans * sizeof(float));
+  output->bufTest	= 1;
 
   return 0;
 }
@@ -192,6 +192,7 @@ int allocateGrainMem(GRAIN *grain, GLOBAL *global)
   grain->grainDur 	= global->minGrainDur + ((float) (global->maxGrainDur - global->minGrainDur) * rand()) / RAND_MAX;
   grain->numFrames 	= (int) (grain->grainDur * grain->inprop.srate);
   grain->buffer 	= (float*) malloc(grain->numFrames * grain->inprop.chans * sizeof(float));
+  grain->bufTest	= 1;
 
   return 0;
 }
@@ -237,8 +238,8 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
 
 int cleanUp(GRAIN *grain, GRANSOUND *output, GLOBAL *global)
 {
-  free(output->buffer);
-  free(grain->buffer);
+  if(output->bufTest)free(output->buffer), output->bufTest 	= 0;
+  if(grain->bufTest)free(grain->buffer), grain->bufTest 	= 0;
 
   closePSF(
       grain, 

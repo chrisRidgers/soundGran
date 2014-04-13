@@ -30,6 +30,7 @@ typedef struct GRAIN
   float grainX;
   
   float *buffer;
+  int bufTest;
   PSF_PROPS inprop;
 
 } GRAIN;
@@ -47,6 +48,7 @@ typedef struct GRANSOUND
   float grainDensity;
   
   float *buffer;
+  int bufTest;
   PSF_PROPS outprop;
 } GRANSOUND;
 
