@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
       &grain, 
       &output, 
       &global);
-  /*
+  
   allocateOutputMem(&output); 		//Setting up output buffer
 
   while(global.spaceLeft)
@@ -93,7 +93,7 @@ cleanup:
       &grain, 
       &output, 
       &global);
-   */
+   
   return 0;
 }
 
