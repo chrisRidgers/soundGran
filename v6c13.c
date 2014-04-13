@@ -146,15 +146,6 @@ int setupVariables(
     printf("Interactive flag is set \n");
   if(global->verbose)
     printf("Verbose flag is set \n");
-                 /*
-  if(optind < global->argc)
-  {
-    printf("None option ARG-V elements: ");
-    while(optind < global->argc)
-      printf("%s \t ", global->argv[optind++]);
-    putchar('\n');
-  }
-  */
 
   global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
   printf("%f \n", global->minGrainDur);
