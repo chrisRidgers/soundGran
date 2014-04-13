@@ -2,26 +2,39 @@
 #include <stdlib.h>
 #include <math.h>
 #include <portsf.h>
+#include <getopt.h>
 #include "v6c13b.h"
 
 int main(int argc, char *argv[])
 {
-  GLOBAL 	global = {1, argv}; 	//Struct to hold global variables
+  GLOBAL 	global = {
+    argv, 
+    argc,
+    1, 
+    0, 
+    0, 
+    0,
+    { {"interactive", no_argument, &global.interactive, 1},
+      {"help", no_argument, &global.help, 1},
+      {"verbose", no_argument, &global.verbose, 1},
+      {0, 0, 0, 0}},
+    0}; 	
   GRAIN 	grain; 			//Struct to hold grain related variables
   GRANSOUND 	output = {0,0}; 	//Struct to hold variables affecting the output buffer
-
+  /*
   if(argc!=ARGC)
   {
     printf("Please use v6c13.out as: v6c13.out INPUT_WAV OUTPUT_WAV OUTPUT_DURATION(seconds) MINGRAINDURATION(seconds) MAXGRAINDURATION(seconds) GRAINATTACKDURATION(percent) GRAINDECAYDURATION(percent) GRAINDENSITY(grains per second)\n");
 
     return 1;
   }
+  */
 
   setupVariables(
       &grain, 
       &output, 
       &global);
-
+  /*
   allocateOutputMem(&output); 		//Setting up output buffer
 
   while(global.spaceLeft)
@@ -48,7 +61,7 @@ int main(int argc, char *argv[])
       global.spaceLeft 	= 1;		//Just in case variable somehow becomes unset
 
       float *grainStart = output.buffer + output.step * output.outprop.chans;
-      					//Pointer to first frame of grain, adjusts by stepsize each loop
+      //Pointer to first frame of grain, adjusts by stepsize each loop
       for(int i = 0; i < grain.numFrames; i++)
       {
 	grainStart[i] 	= (sqrt(2.0) / 2) * (cos(grain.grainX) + sin(grain.grainX)) * grain.buffer[i] * 0.5;
@@ -56,12 +69,12 @@ int main(int argc, char *argv[])
       }
 
       output.step 	+= output.stepSize;
-      					//Increases step by stepsize for next grain
+      //Increases step by stepsize for next grain
     } else
     {
       global.spaceLeft 	= 0;		//Prevents loop from running once finished
     }
-    
+
     free(grain.buffer);
     grain.bufTest 	= 0;
   }
@@ -80,7 +93,7 @@ cleanup:
       &grain, 
       &output, 
       &global);
-
+   */
   return 0;
 }
 
@@ -89,22 +102,83 @@ int setupVariables(
     GRANSOUND *output, 
     GLOBAL *global)
 {
-  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR]);
-  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR]);
-  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK]);
-  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY]);
+  int c;
+  while(( c = getopt_long(
+	  global->argc,
+	  global->argv,
+	  "ihv",
+	  global->long_options,
+	  &global->option_index)) != -1)
+  {
+    switch(c)
+    {
+      case 0:
+	if(global->long_options[global->option_index].flag != 0)
+	  break;
+	printf("options %s", global->long_options[global->option_index].name);
+	if(optarg)
+	  printf (" with arg %s", optarg);
+	printf("\n");
+	
+      case 'i':
+	global->interactive = 1;
+	break;
+              
+      case 'h':
+	global->help = 1;
 
-  output->duration 		= atof(global->argv[ARG_DUR]);
-  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY]);
+      case 'v':
+	global->verbose = 1;
+
+      case '?':
+	break;
+
+      default:
+	abort();
+
+    }
+  }
+
+  if(global->help)
+    printf("Help flag is set \n");
+  if(global->interactive)
+    printf("Interactive flag is set \n");
+  if(global->verbose)
+    printf("Verbose flag is set \n");
+                 /*
+  if(optind < global->argc)
+  {
+    printf("None option ARG-V elements: ");
+    while(optind < global->argc)
+      printf("%s \t ", global->argv[optind++]);
+    putchar('\n');
+  }
+  */
+
+  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
+  printf("%f \n", global->minGrainDur);
+  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
+  printf("%f \n", global->maxGrainDur);
+  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
+  printf("%d \n", global->grainAttackPercent);
+  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
+  printf("%d \n", global->grainDecayPercent);
+
+  output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
+  printf("%f \n", output->duration);
+  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
+  printf("%f \n", output->grainDensity);
 
   initialisePSF(
       grain, 
       output, 
-      global);
+      global,
+      &optind);
 
   output->stepSize 		= output->grainDensity * output->outprop.srate;
   output->bufTest 		= 0;
   grain->bufTest		= 0;
+  
 
   return 0;
 }
@@ -112,7 +186,8 @@ int setupVariables(
 int initialisePSF(
     GRAIN *grain, 
     GRANSOUND *output, 
-    GLOBAL *global)
+    GLOBAL *global,
+    int *optind)
 {
   if(psf_init())
   {
@@ -120,24 +195,24 @@ int initialisePSF(
     return 1;
   }
 
-  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT], &grain->inprop, 0);
+  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT + (*optind) - 1], &grain->inprop, 0);
   if(grain->inputFile < 0)
   {
-    printf("Error, unable to read %s\n", global->argv[ARG_INPUT]);
+    printf("Error, unable to read %s\n", global->argv[ARG_INPUT + (*optind) - 1]);
     return 1;
   }
 
   output->outprop 	= grain->inprop;
   output->outprop.chans = 2;
   output->outputFile 	= psf_sndCreate(
-      global->argv[ARG_OUTPUT], 
+      global->argv[ARG_OUTPUT + (*optind) - 1], 
       &output->outprop, 
       0, 
       0, 
       PSF_CREATE_RDWR);
   if(output->outputFile < 0)
   {
-    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT]);
+    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT + (*optind) - 1]);
     return 1;
   }
 

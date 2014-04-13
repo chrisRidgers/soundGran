@@ -5,8 +5,15 @@ enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MIN_GRAINDUR, ARG_MAX_GRAINDU
 
 typedef struct GLOBAL
 {
-  int spaceLeft;
   char **argv;
+  int argc;
+  int spaceLeft;
+  int help;
+  int interactive;
+  int verbose;
+  struct option long_options[4];
+  int option_index;
+
   float minGrainDur;
   float maxGrainDur;
   int grainAttackPercent;
@@ -52,7 +59,7 @@ typedef struct GRANSOUND
   PSF_PROPS outprop;
 } GRANSOUND;
 
-int initialisePSF(GRAIN *grain, GRANSOUND *output, GLOBAL *global);
+int initialisePSF(GRAIN *grain, GRANSOUND *output, GLOBAL *global, int *optind);
 int closePSF(GRAIN *grain, GRANSOUND *output, GLOBAL *global);
 int setupVariables(GRAIN *grain, GRANSOUND *output, GLOBAL *global);
 int allocateGrainMem(GRAIN *grain, GLOBAL *global);
