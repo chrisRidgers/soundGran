@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
       global.spaceLeft 	= 1;		//Just in case variable somehow becomes unset
 
       float *grainStart = output.buffer + output.step * output.outprop.chans;
-      //Pointer to first frame of grain, adjusts by stepsize each loop
+      					//Pointer to first frame of grain, adjusts by stepsize each loop
       for(int i = 0; i < grain.numFrames; i++)
       {
 	//printf("NumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
@@ -57,7 +57,8 @@ int main(int argc, char *argv[])
 	//printf("frame: %d \t numFrames: %d \t NumFrames: %d \t \n",i, numFrames, outputNumFrames);
       }
 
-      output.step 	+= output.stepSize;  //Increases step by stepsize for next grain
+      output.step 	+= output.stepSize;
+      					//Increases step by stepsize for next grain
     } else
     {
       global.spaceLeft 	= 0;		//Prevents loop from running once finished
@@ -77,7 +78,7 @@ int main(int argc, char *argv[])
   }
   //printf("finishedWriting\n");
 
-  cleanUp(		//Frees up memory buffers before programme exit
+  cleanUp(				//Frees up memory buffers before programme exit
       &grain, 
       &output, 
       &global);
