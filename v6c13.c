@@ -2,48 +2,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include <portsf.h>
-
-enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MIN_GRAINDUR, ARG_MAX_GRAINDUR, ARG_GRAIN_ATTACK, ARG_GRAIN_DECAY, ARG_GRAIN_DENSITY, ARGC};
-
-int initialisePSF(int *infile, int *outfile, PSF_PROPS *inprop, PSF_PROPS *outprop, char **argv);
-int closePSF(int *infile, int *outfile, char **argv);
-int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, float *grainDensity, long *stepSize, PSF_PROPS *inprop, PSF_PROPS *outprop, char **argv);
-int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *inprop);
-int allocateOutputMem(float *duration, int *outputNumFrames, float **output, PSF_PROPS *outprop);
-int setGrainX(float *grainX);
-int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset);
-int impAttackEnv(int *grainAttackPercent, int *numFrames, float *grain);
-int impDecayEnv(int *grainDecayPercent, int *numFrames, float *grain);
+#include "v6c13b.h"
 
 int main(int argc, char *argv[])
 {
-  PSF_PROPS inprop, outprop;
-
-  int spaceLeft=1;
-
-  int infile;
-  int outfile;			//To test that PSF opens files successfully 
-
-  float duration; 		//Length of output file in seconds 
-  int outputNumFrames;
-  float *output;
-
-  float minGrainDur;
-  float maxGrainDur;
-  float grainDur;		//Length of a grain - Determined using minGrainDur and maxGrainDur 
-  float grainX;
-  int numFrames;
-  float grainDensity;
-  long stepSize=0;
-  long step=0;
-  float *grain;			//Buffer to store individual grain 
-
-  int grainAttackPercent;
-  int grainDecayPercent;	//Stores perecentage of grain to be used for attack and delay 
-
-  int maxSeek;
-  int seekOffset;
-
+  GLOBAL 	global = {1, argv};
+  GRAIN 	grain;
+  GRANSOUND 	output = {0,0};
 
   if(argc!=ARGC)
   {
@@ -51,77 +16,69 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  initialisePSF(&infile, &outfile, &inprop, &outprop, argv);
-  setupVariables(&duration, &minGrainDur, &maxGrainDur, &grainAttackPercent, &grainDecayPercent, &grainDensity, &stepSize, &inprop, &outprop, argv);
-  allocateOutputMem(&duration, &outputNumFrames, &output, &outprop);
-
-  while(spaceLeft)
+  setupVariables(&grain, &output, &global);
+  allocateOutputMem(&output);
+  while(global.spaceLeft)
   {
-    allocateGrainMem(&grainDur, &minGrainDur, &maxGrainDur, &numFrames, &grain, &inprop);
-    setupSeek(&infile, &numFrames, &maxSeek, &seekOffset);
-    psf_sndSeek(infile, seekOffset, PSF_SEEK_SET);						//sets seek of input file 
-    psf_sndReadFloatFrames(infile, grain, numFrames);						//Read grain into grain from input 
-    impAttackEnv(&grainAttackPercent, &numFrames, grain);
-    impDecayEnv(&grainDecayPercent, &numFrames, grain);
-    setGrainX(&grainX);
-    printf("Variables: \t \n \n grainDur \t %f \t numFrames \t %d \t grain(length of) \t %lu \t \n maxSeek \t %d \t seekOffset \t %d \t grainX \t %f \t \n \n duration \t %f \t outputNumFrames \t %d \t \n stepSize \t %ld \t output(length of) \t %ld \t \n \n inprop: \t \n \n props.chans \t %d \t \n props.srate \t %d \t \n \n (size of float = %lu ) \t \n leftChannel \t %f \t rightChannel \t %f \t channelSum \t %f \t \n \n", grainDur, numFrames, numFrames*inprop.chans*sizeof(float), maxSeek, seekOffset, grainX, duration, outputNumFrames, stepSize, outputNumFrames*inprop.chans*sizeof(float), inprop.chans, inprop.srate, sizeof(float), (sqrt(2.0)/2) * (cos(grainX)+sin(grainX)) * 0.5, (sqrt(2.0)/2) * (cos(grainX)-sin(grainX)) * 0.5, ((sqrt(2.0)/2) * (cos(grainX)+sin(grainX)) * 0.5 ) + ((sqrt(2.0)/2) * (cos(grainX)-sin(grainX)) * 0.5 ));
+    allocateGrainMem(&grain, &global);
+    setupSeek(&grain);
+    psf_sndSeek(grain.inputFile, grain.seekOffset, PSF_SEEK_SET);						//sets seek of input file 
+    psf_sndReadFloatFrames(grain.inputFile, grain.buffer, grain.numFrames);						//Read grain into grain from input 
+    impAttackEnv(&grain, &global);
+    impDecayEnv(&grain, &global);
+    setGrainX(&grain);
     //printf("Seek offset %d \t NumFrames %d \t FileSize %d\t grainDur %f \n", seekOffset, numFrames,psf_sndSize(infile), grainDur);
-    
-    if(outputNumFrames - step > numFrames)
+
+    if(output.NumFrames - output.step > grain.numFrames)
     {
-      spaceLeft = 1;
-      float *grainStart = output + step*outprop.chans;
-      for(int i = 0; i < numFrames; i++)
+      global.spaceLeft = 1;
+      float *grainStart = output.buffer + output.step*output.outprop.chans;
+      for(int i = 0; i < grain.numFrames; i++)
       {
-	//printf("outputNumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
-	grainStart[i] = (sqrt(2.0)/2) * (cos(grainX)+sin(grainX)) * grain[i] * 0.5;
-	grainStart[i+1] = (sqrt(2.0)/2) * (cos(grainX)-sin(grainX)) * grain[i] * 0.5;
-	//printf("frame: %d \t numFrames: %d \t outputNumFrames: %d \t \n",i, numFrames, outputNumFrames);
+	//printf("NumFrames: \t %d \t stepSize \t %ld \t numFrames: \t %d \t outputNumFrames - stepSize: \t %ld \t \n", outputNumFrames, stepSize, numFrames, outputNumFrames - stepSize);
+	grainStart[i] = (sqrt(2.0)/2) * (cos(grain.grainX)+sin(grain.grainX)) * grain.buffer[i] * 0.5;
+	grainStart[i+1] = (sqrt(2.0)/2) * (cos(grain.grainX)-sin(grain.grainX)) * grain.buffer[i] * 0.5;
+	//printf("frame: %d \t numFrames: %d \t NumFrames: %d \t \n",i, numFrames, outputNumFrames);
       }
-      step += stepSize;
+      output.step += output.stepSize;
     } else
     {
-      spaceLeft = 0;
+      global.spaceLeft = 0;
     }
-    free(grain);
     //printf("Memory freed\n");
   }
-  printf("loop ended\n");
 
-  if(psf_sndWriteFloatFrames(outfile, output, outputNumFrames) != outputNumFrames)
+  if(psf_sndWriteFloatFrames(output.outputFile, output.buffer, output.NumFrames) != output.NumFrames)
   {
-    printf("Warning: error writing %s\n", argv[ARG_OUTPUT]);
+    printf("Warning: error writing %s\n", global.argv[ARG_OUTPUT]);
     return 1;
   }
   //printf("finishedWriting\n");
 
-  free(output);
-
-  closePSF(&infile, &outfile, argv);
-
+  cleanUp(&grain, &output, &global);
   return 0;
 }
 
-int setGrainX(float *grainX)
+int setGrainX(GRAIN *grain)
 {
-  *grainX = (-1.0f)+ (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
+  grain->grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
   return 0;
 }
 
-int closePSF(int *infile, int *outfile, char **argv)
+int closePSF(GRAIN *grain, GRANSOUND *output, GLOBAL *global)
 {
-  if(*infile >= 0)
+  if(grain->inputFile >= 0)
   {
-    if(psf_sndClose(*infile))
+    if(psf_sndClose(grain->inputFile))
     {
-      printf("Warning error closing %s\n", argv[ARG_INPUT]);
+      printf("Warning error closing %s\n", global->argv[ARG_INPUT]);
     }
   }
-  if(*outfile >= 0)
+  if(output->outputFile >= 0)
   {
-    if(psf_sndClose(*outfile))
+    if(psf_sndClose(output->outputFile))
     {
-      printf("Warning error closing %s\n", argv[ARG_OUTPUT]);
+      printf("Warning error closing %s\n", global->argv[ARG_OUTPUT]);
     }
     printf("Closed fine \n");
   }
@@ -130,7 +87,7 @@ int closePSF(int *infile, int *outfile, char **argv)
   return 0;
 }
 
-int initialisePSF(int *infile, int *outfile, PSF_PROPS *inprop, PSF_PROPS *outprop,char **argv)
+int initialisePSF(GRAIN *grain, GRANSOUND *output, GLOBAL *global)
 {
   if(psf_init())
   {
@@ -138,90 +95,98 @@ int initialisePSF(int *infile, int *outfile, PSF_PROPS *inprop, PSF_PROPS *outpr
     return 1;
   }
 
-  *infile = psf_sndOpen(argv[ARG_INPUT], inprop, 0);
-  if(*infile<0)
+  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT], &grain->inprop, 0);
+  if(grain->inputFile<0)
   {
-    printf("Error, unable to read %s\n", argv[ARG_INPUT]);
+    printf("Error, unable to read %s\n", global->argv[ARG_INPUT]);
     return 1;
   }
 
-  outprop->chans = 2;
-  outprop->srate = 44100;
-  outprop->samptype = PSF_SAMP_32;
-  outprop->format = PSF_STDWAVE;
-  outprop->chformat = MC_STEREO;
-  *outfile = psf_sndCreate(argv[ARG_OUTPUT], outprop, 0, 0, PSF_CREATE_RDWR);
-  if(*outfile<0)
+  output->outprop = grain->inprop;
+  output->outprop.chans = 2;
+  output->outputFile = psf_sndCreate(global->argv[ARG_OUTPUT], &output->outprop, 0, 0, PSF_CREATE_RDWR);
+  if(output->outputFile<0)
   {
-    printf("Error, unable to create %s\n", argv[ARG_OUTPUT]);
+    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT]);
     return 1;
   }
   return 0;
 }
 
-int setupVariables(float *duration, float *minGrainDur, float *maxGrainDur, int *grainAttackPercent, int *grainDecayPercent, float *grainDensity, long *stepSize, PSF_PROPS *inprop, PSF_PROPS *outprop, char **argv)
+int setupVariables(GRAIN *grain, GRANSOUND *output, GLOBAL *global)
 {
-  *duration = atof(argv[ARG_DUR]);
-  *maxGrainDur = atof(argv[ARG_MAX_GRAINDUR]);
-  *minGrainDur = atof(argv[ARG_MIN_GRAINDUR]);
-  *grainAttackPercent = atoi(argv[ARG_GRAIN_ATTACK]);
-  *grainDecayPercent = atoi(argv[ARG_GRAIN_DECAY]);
-  *grainDensity = 1.0/atof(argv[ARG_GRAIN_DENSITY]);
-  *stepSize = (*grainDensity)*outprop->srate;
-  printf("*duration: \t %f \t *maxGrainDur \t %f \t *minGrainDur \t %f \t *grainDensity \t %f \t *stepSize \t %ld \t \n", *duration, *maxGrainDur, *minGrainDur, *grainDensity, *stepSize);
+  global->minGrainDur = atof(global->argv[ARG_MIN_GRAINDUR]);
+  global->maxGrainDur = atof(global->argv[ARG_MAX_GRAINDUR]);
+  global->grainAttackPercent = atoi(global->argv[ARG_GRAIN_ATTACK]);
+  global->grainDecayPercent = atoi(global->argv[ARG_GRAIN_DECAY]);
+
+  output->duration = atof(global->argv[ARG_DUR]);
+  output->grainDensity = 1.0/atof(global->argv[ARG_GRAIN_DENSITY]);
+
+  initialisePSF(grain, output, global);
+
+  output->stepSize = output->grainDensity*output->outprop.srate;
+
   return 0;
 }
 
-int allocateOutputMem(float *duration, int *outputNumFrames, float **output, PSF_PROPS *outprop)
+int allocateOutputMem(GRANSOUND *output)
 {
-  *outputNumFrames = (int)(*duration)*outprop->srate;
-  *output = (float*)calloc(1, (*outputNumFrames)*outprop->chans*sizeof(float));
+  output->NumFrames = (int)output->duration*output->outprop.srate;
+  output->buffer = (float*)calloc(1, output->NumFrames*output->outprop.chans*sizeof(float));
   return 0;
 }
 
-int allocateGrainMem(float *grainDur, float *minGrainDur, float *maxGrainDur, int *numFrames, float **grain, PSF_PROPS *inprop)
+int allocateGrainMem(GRAIN *grain, GLOBAL *global)
 {
-  *grainDur  = *minGrainDur+((float)(*maxGrainDur-*minGrainDur)*rand())/RAND_MAX;		//Calculate grainDur using minGrainDur and maxGrainDur 
-  *numFrames = (int)(*grainDur*inprop->srate);							//Calculate numFrames based on props sample rate 
-  *grain = (float*)malloc(*numFrames*inprop->chans*sizeof(float));				//Allocate buffer for grain 
-  //printf("*TEMPVALUE: \t %d \t *inprop->srate: \t %d \t *grainDur: \t %f \t *minGrainDur \t %f \t *maxGrainDur \t %f \t *numFrames:\t %d \n", (int)(((int)*grainDur)*(props->srate)), props->srate, *grainDur, *minGrainDur, *maxGrainDur, *numFrames);
+  grain->grainDur = global->minGrainDur+((float)(global->maxGrainDur-global->minGrainDur)*rand())/RAND_MAX;
+  grain->numFrames = (int)(grain->grainDur*grain->inprop.srate);
+  grain->buffer = (float*)malloc(grain->numFrames*grain->inprop.chans*sizeof(float));
   return 0;
 }
 
-int setupSeek(int *infile, int *numFrames, int *maxSeek, int *seekOffset)
+int setupSeek(GRAIN *grain)
 {
-  *maxSeek = psf_sndSize(*infile)-*numFrames;							//calculate maximum seek position 
-  *seekOffset = ((float)*maxSeek*rand())/RAND_MAX;						//calculate random seek position 
-  //printf("*maxSeek: \t %d \t *seekOffset \t %d \t \n", *maxSeek, *seekOffset);
+  grain->maxSeek = psf_sndSize(grain->inputFile)-grain->numFrames;
+  grain->seekOffset = ((float)grain->maxSeek*rand())/RAND_MAX;
   return 0;
 }
 
-int impAttackEnv(int *grainAttackPercent, int *numFrames, float *grain)
+int impAttackEnv(GRAIN *grain, GLOBAL *global)
 {
-  long grainAttack = (*grainAttackPercent)*(*numFrames)/100.0;
+  long grainAttack = global->grainAttackPercent*grain->numFrames/100.0;
   float factor = 0.0;
   float increment = 1.0/grainAttack;
 
   for(int i=0; i<grainAttack; i++)
   {
-    grain[i] = factor*grain[i];
-    factor+=increment;
+    grain->buffer[i] = factor*grain->buffer[i];
+    factor += increment;
   }
   return 0;
 }
 
-int impDecayEnv(int *grainDecayPercent, int *numFrames, float *grain)
+int impDecayEnv(GRAIN* grain, GLOBAL *global)
 {
-  long grainDecay = (*grainDecayPercent)*(*numFrames)/100.0;
-  float *decayStart = grain+((*numFrames)-grainDecay);
+  long grainDecay = global->grainDecayPercent * grain->numFrames/100.0;
+  float *decayStart = grain->buffer + (grain->numFrames - grainDecay);
 
   float factor = 1.0;
-  float increment = 1.0/grainDecay;
+  float increment = 1.0 / grainDecay;
 
   for(int i=0; i<grainDecay; i++)
   {
     decayStart[i] = factor * decayStart[i];
     factor -= increment;
   }
+
+  return 0;
+}
+
+int cleanUp(GRAIN *grain, GRANSOUND *output, GLOBAL *global)
+{
+  free(output->buffer);
+  free(grain->buffer);
+  closePSF(grain, output, global);
   return 0;
 }
