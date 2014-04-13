@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+cleanup:
   cleanUp(				//Frees up memory buffers before programme exit
       &grain, 
       &output, 
