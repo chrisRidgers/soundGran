@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
       //Pointer to first frame of grain, adjusts by stepsize each loop
       for(int i = 0; i < grain.numFrames; i++)
       {
-	grainStart[2 * i] 		+= grain.panInfo.left * grain.buffer[i];
-	grainStart[2 * i + 1] 		+= grain.panInfo.right * grain.buffer[i];
+	grainStart[2 * i] 		+= grain.panInfo.left * grain.buffer[i] * 0.5;
+	grainStart[2 * i + 1] 		+= grain.panInfo.right * grain.buffer[i] * 0.5;
       }
 
       output.step 	+= output.stepSize;
@@ -272,14 +272,6 @@ int setGrainX(GRAIN *grain)
   grain->panInfo.grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
   grain->panInfo.left = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
   grain->panInfo.right = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
-  /*
-  float piovr2 = M_PI * 0.5;
-  float root2ovr2 = sqrt(2.0) * 0.5;
-  float thispos = grain->panInfo.grainX * piovr2;
-  float angle = thispos * 0.5;
-   */
-  //grain->panInfo.left = root2ovr2 * (cos(angle) - sin(angle));
-  //grain->panInfo.right = root2ovr2 * (cos(angle) + sin(angle));
 
   return 0;
 }
@@ -366,10 +358,11 @@ int initialisePSF(INITPSF *initStruct)
 
       initStruct->output->outprop 	= initStruct->grain->inprop;
       initStruct->output->outprop.chans = 2;
+      initStruct->output->outprop.format = PSF_WAVE_EX;
       initStruct->output->outputFile 	= psf_sndCreate(
 	  initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1], 
 	  &initStruct->output->outprop, 
-	  0, 
+	  1, 
 	  0, 
 	  PSF_CREATE_RDWR);
 
@@ -392,10 +385,11 @@ int initialisePSF(INITPSF *initStruct)
 
       initStruct->output->outprop 	= initStruct->grain->inprop;
       initStruct->output->outprop.chans = 2;
+      initStruct->output->outprop.format = PSF_WAVE_EX;
       initStruct->output->outputFile 	= psf_sndCreate(
 	  initStruct->outputFile, 
 	  &initStruct->output->outprop, 
-	  0, 
+	  1, 
 	  0, 
 	  PSF_CREATE_RDWR);
       if(initStruct->output->outputFile < 0)
