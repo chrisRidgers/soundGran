@@ -23,20 +23,20 @@ int main(int argc, char *argv[])
   GRANSOUND 	output = {0,0}; 	//Struct to hold variables affecting the output buffer
   INITPSF	initStruct = {T_DEFAULT};
   /*
-  if(argc!=ARGC)
-  {
-    printf("Please use v6c13.out as: v6c13.out INPUT_WAV OUTPUT_WAV OUTPUT_DURATION(seconds) MINGRAINDURATION(seconds) MAXGRAINDURATION(seconds) GRAINATTACKDURATION(percent) GRAINDECAYDURATION(percent) GRAINDENSITY(grains per second)\n");
+     if(argc!=ARGC)
+     {
+     printf("Please use v6c13.out as: v6c13.out INPUT_WAV OUTPUT_WAV OUTPUT_DURATION(seconds) MINGRAINDURATION(seconds) MAXGRAINDURATION(seconds) GRAINATTACKDURATION(percent) GRAINDECAYDURATION(percent) GRAINDENSITY(grains per second)\n");
 
-    return 1;
-  }
-  */
+     return 1;
+     }
+     */
 
   setupVariables(
       &grain, 
       &output, 
       &global,
       &initStruct);
-  
+
   allocateOutputMem(&output); 		//Setting up output buffer
 
   while(global.spaceLeft)
@@ -95,7 +95,7 @@ cleanup:
       &grain, 
       &output, 
       &global);
-   
+
   return 0;
 }
 
@@ -122,11 +122,11 @@ int setupVariables(
 	if(optarg)
 	  printf (" with arg %s", optarg);
 	printf("\n");
-	
+
       case 'i':
 	global->interactive = 1;
 	break;
-              
+
       case 'h':
 	global->help = 1;
 
@@ -145,25 +145,25 @@ int setupVariables(
   if(global->help)
   {
     printf("\n v6c13.c sound granulator works as follows:\n \n \tPlease supply options in order of: \n \t \t INPUT(wav/aif file) \n \t \t OUTPUT(wav/aif file) \n \t \t DURATION(seconds) \n \t \t MINIMUMGRAINLENGTH(seconds) \n \t \t MAXIMUMGRAINLENGTH(seconds) \n \t \t ATTACKLENGTH(percentage of grain duration) \n \t \t ATTACKDECAY(percentage of grain duration) \n \t \t GRAINDENSITY(number of grains per secondn)\n \n \t \t Example: \n \t \t \t (./)v6c13.out input.wav output.wav 20 0.2 0.4 10 10 40 \n \n \t Also, the following options may be useful: \n \t \t -h, --help \t \t Display's this dialogue \n \t \t -v, --verbose \t \t Run's the programme while updating the user via the command line. \n \t \t -i, --interactive \t Force the programme to ignore all other arguments (bar help) and request input from the user to produce an output \n \n");
-  exit(0);
+    exit(0);
   }
   if(global->interactive)
   {
     initStruct->type = T_INTERACTIVE;
     printf("Running interactively: \n \n");
-   
+
     printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
     scanf("%s", global->inputFile);
-    
+
     printf("\n Please enter a valid output file (less than 20 characters) e.g output.wav: ");
     scanf("%s", global->outputFile);
-   
+
     printf("\n Please enter a valid output duration e.g 20: ");
     scanf("%f", &output->duration);
-  
+
     printf("\n Please enter a valid minimum grain duration e.g 0.2: ");
     scanf("%f", &global->minGrainDur);
- 
+
     printf("\n Please enter a valid maximum grain duration e.g 0.4: ");
     scanf("%f", &global->maxGrainDur);
 
@@ -177,7 +177,7 @@ int setupVariables(
     float grainDensity;
     scanf("%f", &grainDensity);
     output->grainDensity = 1.0 / grainDensity;
-    
+
     printf("\n");
 
   }
@@ -187,11 +187,11 @@ int setupVariables(
 
 
   /*initialisePSF(
-      grain, 
-      output, 
-      global,
-      &optind);
-      */
+    grain, 
+    output, 
+    global,
+    &optind);
+    */
 
   output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
   //printf("%f \n", output->duration);
@@ -379,7 +379,9 @@ int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, GRANSOUND *output, GLOBAL 
       break;
     case T_INTERACTIVE:
       initStruct->inputFile = global->inputFile;
+      printf("%s \n", initStruct->inputFile);
       initStruct->outputFile = global->outputFile;
+      printf("%s \n", initStruct->outputFile);
       break;
   }
 
@@ -388,72 +390,71 @@ int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, GRANSOUND *output, GLOBAL 
 
 int initialisePSF2(INITPSF *initStruct)
 { 
-  int i = 0;
-  printf("%d \n", i++);
   if(psf_init())
   {
     printf("Error: unable to open portsf\n");
     return 1;
   }
 
-  printf("%d \n", i++);
   switch(initStruct->type)
   {
     case T_DEFAULT:
-  printf("%d \n", i++);
-printf("%d \n", initStruct->optind);
-      initStruct->grain->inputFile = psf_sndOpen(initStruct->global->argv[ARG_INPUT + (int)initStruct->optind - 1], &initStruct->grain->inprop, 0);
-  printf("%d \n", i++);
+
+      initStruct->grain->inputFile = psf_sndOpen(initStruct->global->argv[ARG_INPUT + *(initStruct->optind) - 1], &initStruct->grain->inprop, 0);
       if(initStruct->grain->inputFile < 0)
       {
-	printf("Error, unable to read %s\n", initStruct->global->argv[ARG_INPUT + (int)initStruct->optind - 1]);
+	printf("Error, unable to read %s\n", initStruct->global->argv[ARG_INPUT + *(initStruct->optind) - 1]);
 	return 1;
       }
 
-  printf("%d \n", i++);
       initStruct->output->outprop 	= initStruct->grain->inprop;
-  printf("%d \n", i++);
       initStruct->output->outprop.chans = 2;
-  printf("%d \n", i++);
       initStruct->output->outputFile 	= psf_sndCreate(
-	  initStruct->global->argv[ARG_OUTPUT + (int)initStruct->optind - 1], 
+	  initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1], 
 	  &initStruct->output->outprop, 
 	  0, 
 	  0, 
 	  PSF_CREATE_RDWR);
-  printf("%d \n", i++);
+
       if(initStruct->output->outputFile < 0)
       {
-	printf("Error, unable to create %s\n", initStruct->global->argv[ARG_OUTPUT + (int)initStruct->optind - 1]);
+	printf("Error, unable to create %s\n", initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1]);
 	return 1;
       }
-  printf("%d \n", i++);
 
       break;
 
     case T_INTERACTIVE:
-  printf("%d \n", i++);
+      printf("aargh \n");
+      printf("%s \n", initStruct->inputFile);                                                               
 
-      initStruct->grain->inputFile = psf_sndOpen(initStruct->inputFile, &initStruct->grain->inprop, 0);
+      initStruct->grain->inputFile = psf_sndOpen(initStruct->inputFile, &initStruct->grain->inprop, 0); //??????
+
+      printf("aargh \n");
       if(initStruct->grain->inputFile < 0)
       {
 	printf("Error, unable to read %s\n", initStruct->inputFile);
 	return 1;
       }
+      printf("aargh \n");
 
       initStruct->output->outprop 	= initStruct->grain->inprop;
+      printf("aargh \n");
       initStruct->output->outprop.chans = 2;
+      printf("aargh \n");
       initStruct->output->outputFile 	= psf_sndCreate(
 	  initStruct->outputFile, 
 	  &initStruct->output->outprop, 
 	  0, 
 	  0, 
 	  PSF_CREATE_RDWR);
+      printf("aargh \n");
       if(initStruct->output->outputFile < 0)
       {
 	printf("Error, unable to create %s\n", initStruct->outputFile);
 	return 1;
       }
+      printf("aargh \n");
 
       break;
   }
