@@ -20,6 +20,13 @@ typedef struct GLOBAL
   int grainDecayPercent;
 } GLOBAL;
 
+typedef struct PANPOS
+{
+  float grainX;
+  float left;
+  float right;
+} PANPOS;
+
 
 typedef struct GRAIN
 {
@@ -34,7 +41,7 @@ typedef struct GRAIN
   int maxSeek;
   int seekOffset;
 
-  float grainX;
+  PANPOS panInfo;
   
   float *buffer;
   int bufTest;

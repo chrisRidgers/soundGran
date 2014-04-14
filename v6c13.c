@@ -64,8 +64,8 @@ int main(int argc, char *argv[])
       //Pointer to first frame of grain, adjusts by stepsize each loop
       for(int i = 0; i < grain.numFrames; i++)
       {
-	grainStart[i] 	= (sqrt(2.0) / 2) * (cos(grain.grainX) + sin(grain.grainX)) * grain.buffer[i] * 0.5;
-	grainStart[i+1] = (sqrt(2.0) / 2) * (cos(grain.grainX) - sin(grain.grainX)) * grain.buffer[i] * 0.5;
+	grainStart[i] 	= grain.panInfo.left * grain.buffer[i];
+	grainStart[i+1] = grain.panInfo.right * grain.buffer[i];
       }
 
       output.step 	+= output.stepSize;
@@ -149,18 +149,19 @@ int setupVariables(
   if(global->verbose)
     printf("Verbose flag is set \n");
 
-  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
+  optind--;
+  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind]);
   printf("%f \n", global->minGrainDur);
-  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
+  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind]);
   printf("%f \n", global->maxGrainDur);
-  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
+  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind]);
   printf("%d \n", global->grainAttackPercent);
-  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
+  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind]);
   printf("%d \n", global->grainDecayPercent);
 
-  output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
+  output->duration 		= atof(global->argv[ARG_DUR + optind]);
   printf("%f \n", output->duration);
-  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
+  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind]);
   printf("%f \n", output->grainDensity);
 
   initialisePSF(
@@ -189,24 +190,24 @@ int initialisePSF(
     return 1;
   }
 
-  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT + (*optind) - 1], &grain->inprop, 0);
+  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT + (*optind)], &grain->inprop, 0);
   if(grain->inputFile < 0)
   {
-    printf("Error, unable to read %s\n", global->argv[ARG_INPUT + (*optind) - 1]);
+    printf("Error, unable to read %s\n", global->argv[ARG_INPUT + (*optind)]);
     return 1;
   }
 
   output->outprop 	= grain->inprop;
   output->outprop.chans = 2;
   output->outputFile 	= psf_sndCreate(
-      global->argv[ARG_OUTPUT + (*optind) - 1], 
+      global->argv[ARG_OUTPUT + (*optind)], 
       &output->outprop, 
       0, 
       0, 
       PSF_CREATE_RDWR);
   if(output->outputFile < 0)
   {
-    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT + (*optind) - 1]);
+    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT + (*optind)]);
     return 1;
   }
 
@@ -273,7 +274,9 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
 
 int setGrainX(GRAIN *grain)
 {
-  grain->grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
+  grain->panInfo.grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
+  grain->panInfo.left = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
+  grain->panInfo.right = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
 
   return 0;
 }
