@@ -145,35 +145,89 @@ int setupVariables(
   exit(0);
   }
   if(global->interactive)
-    printf("Interactive flag is set \n");
-  if(global->verbose)
-    printf("Verbose flag is set \n");
+  {
+    printf("Running interactively: \n \n");
+    printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
+    char inputFile[21];
+    scanf("%s", inputFile);
+    printf("\n Please enter a valid output file (less than 20 characters) e.g output.wav: ");
+    char outputFile[21];
+    scanf("%s", outputFile);
+    printf("\n Please enter a valid output duration e.g 20: ");
+    scanf("%f", &output->duration);
+    printf("\n Please enter a valid minimum grain duration e.g 0.2: ");
+    scanf("%f", &global->minGrainDur);
+    printf("\n Please enter a valid maximum grain duration e.g 0.4: ");
+    scanf("%f", &global->maxGrainDur);
+    printf("\n Please enter a valid percentage value for the grain attack envelope e.g 10: ");
+    scanf("%d", &global->grainAttackPercent);
+    printf("\n Please enter a valid percentage value for the graind decay envelope e.g 10: ");
+    scanf("%d", &global->grainDecayPercent);
+    printf("\n Please enter a valid value for the number of grains per second e.g 25: ");
+    float grainDensity;
+    scanf("%f", &grainDensity);
+    printf("\n");
+    output->grainDensity = 1.0 / grainDensity;
+    
+    if(psf_init())
+    {
+      printf("Error: unable to open portsf\n");
+      return 1;
+    }
 
-  optind--;
-  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind]);
-  printf("%f \n", global->minGrainDur);
-  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind]);
-  printf("%f \n", global->maxGrainDur);
-  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind]);
-  printf("%d \n", global->grainAttackPercent);
-  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind]);
-  printf("%d \n", global->grainDecayPercent);
+    grain->inputFile = psf_sndOpen(inputFile, &grain->inprop, 0);
+    if(grain->inputFile < 0)
+    {
+      printf("Error, unable to read %s\n", inputFile);
+      return 1;
+    }
+    if(global->verbose)
+      printf("Running verbosely.... Captain... incoming message...\n");
 
-  output->duration 		= atof(global->argv[ARG_DUR + optind]);
-  printf("%f \n", output->duration);
-  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind]);
-  printf("%f \n", output->grainDensity);
+    output->outprop 	= grain->inprop;
+    output->outprop.chans = 2;
+    output->outputFile 	= psf_sndCreate(
+	outputFile, 
+	&output->outprop, 
+	0, 
+	0, 
+	PSF_CREATE_RDWR);
+    if(output->outputFile < 0)
+    {
+      printf("Error, unable to create %s\n", outputFile);
+      return 1;
+    }
 
-  initialisePSF(
-      grain, 
-      output, 
-      global,
-      &optind);
+  }else
+  {
+
+    initialisePSF(
+	grain, 
+	output, 
+	global,
+	&optind);
+
+    output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
+    //printf("%f \n", output->duration);
+    global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
+    //printf("%f \n", global->minGrainDur);
+    global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
+    //printf("%f \n", global->maxGrainDur);
+    global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
+    //printf("%d \n", global->grainAttackPercent);
+    global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
+    //printf("%d \n", global->grainDecayPercent);
+
+    output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
+    //printf("%f \n", output->grainDensity);
+  };
+
+
 
   output->stepSize 		= output->grainDensity * output->outprop.srate;
   output->bufTest 		= 0;
   grain->bufTest		= 0;
-  
+
 
   return 0;
 }
@@ -190,24 +244,24 @@ int initialisePSF(
     return 1;
   }
 
-  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT + (*optind)], &grain->inprop, 0);
+  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT + (*optind) - 1], &grain->inprop, 0);
   if(grain->inputFile < 0)
   {
-    printf("Error, unable to read %s\n", global->argv[ARG_INPUT + (*optind)]);
+    printf("Error, unable to read %s\n", global->argv[ARG_INPUT + (*optind) - 1]);
     return 1;
   }
 
   output->outprop 	= grain->inprop;
   output->outprop.chans = 2;
   output->outputFile 	= psf_sndCreate(
-      global->argv[ARG_OUTPUT + (*optind)], 
+      global->argv[ARG_OUTPUT + (*optind) - 1], 
       &output->outprop, 
       0, 
       0, 
       PSF_CREATE_RDWR);
   if(output->outputFile < 0)
   {
-    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT + (*optind)]);
+    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT + (*optind) - 1]);
     return 1;
   }
 
@@ -298,14 +352,14 @@ int closePSF(
   {
     if(psf_sndClose(grain->inputFile))
     {
-      printf("Warning error closing %s\n", global->argv[ARG_INPUT]);
+      printf("Warning error closing %s\n", global->argv[ARG_INPUT + optind - 1]);
     }
   }
   if(output->outputFile >= 0)
   {
     if(psf_sndClose(output->outputFile))
     {
-      printf("Warning error closing %s\n", global->argv[ARG_OUTPUT]);
+      printf("Warning error closing %s\n", global->argv[ARG_OUTPUT + optind - 1]);
     }
     printf("Closed fine \n");
   }
