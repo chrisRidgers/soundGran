@@ -183,7 +183,7 @@ int setupVariables(
   }
 
   setOverloadPSF(initStruct, grain, output, global, &optind);
-  initialisePSF2(initStruct);
+  initialisePSF(initStruct);
 
 
   /*initialisePSF(
@@ -217,7 +217,7 @@ int setupVariables(
   return 0;
 }
 
-int initialisePSF(
+int initialisePSF2(
     GRAIN *grain, 
     GRANSOUND *output, 
     GLOBAL *global,
@@ -378,17 +378,18 @@ int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, GRANSOUND *output, GLOBAL 
       initStruct->optind = optind;
       break;
     case T_INTERACTIVE:
+      initStruct->grain = grain;
+      initStruct->output = output;
+      initStruct->global = global;
       initStruct->inputFile = global->inputFile;
-      printf("%s \n", initStruct->inputFile);
       initStruct->outputFile = global->outputFile;
-      printf("%s \n", initStruct->outputFile);
       break;
   }
 
   return 0;
 }
 
-int initialisePSF2(INITPSF *initStruct)
+int initialisePSF(INITPSF *initStruct)
 { 
   if(psf_init())
   {
@@ -425,36 +426,27 @@ int initialisePSF2(INITPSF *initStruct)
       break;
 
     case T_INTERACTIVE:
-      printf("aargh \n");
-      printf("%s \n", initStruct->inputFile);                                                               
 
       initStruct->grain->inputFile = psf_sndOpen(initStruct->inputFile, &initStruct->grain->inprop, 0); //??????
-
-      printf("aargh \n");
       if(initStruct->grain->inputFile < 0)
       {
 	printf("Error, unable to read %s\n", initStruct->inputFile);
 	return 1;
       }
-      printf("aargh \n");
 
       initStruct->output->outprop 	= initStruct->grain->inprop;
-      printf("aargh \n");
       initStruct->output->outprop.chans = 2;
-      printf("aargh \n");
       initStruct->output->outputFile 	= psf_sndCreate(
 	  initStruct->outputFile, 
 	  &initStruct->output->outprop, 
 	  0, 
 	  0, 
 	  PSF_CREATE_RDWR);
-      printf("aargh \n");
       if(initStruct->output->outputFile < 0)
       {
 	printf("Error, unable to create %s\n", initStruct->outputFile);
 	return 1;
       }
-      printf("aargh \n");
 
       break;
   }
