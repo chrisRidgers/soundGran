@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
       for(int i = 0; i < grain.numFrames; i++)
       {
 	grainStart[i] 	= grain.panInfo.left * grain.buffer[i];
-	grainStart[i+1] = grain.panInfo.right * grain.buffer[i];
+	grainStart[i + 1] = grain.panInfo.right * grain.buffer[i];
       }
 
       output.step 	+= output.stepSize;
@@ -275,8 +275,16 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
 int setGrainX(GRAIN *grain)
 {
   grain->panInfo.grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
-  grain->panInfo.left = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
-  grain->panInfo.right = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
+  //grain->panInfo.left = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
+  //grain->panInfo.right = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
+
+  float piovr2 = M_PI * 0.5;
+  float root2ovr2 = sqrt(2.0) * 0.5;
+  float thispos = grain->panInfo.grainX * piovr2;
+  float angle = thispos * 0.5;
+
+  grain->panInfo.left = root2ovr2 * (cos(angle) - sin(angle));
+  grain->panInfo.right = root2ovr2 * (cos(angle) + sin(angle));
 
   return 0;
 }
