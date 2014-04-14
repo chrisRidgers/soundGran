@@ -83,7 +83,6 @@ typedef struct INITPSF
 } INITPSF;
 
 int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, GRANSOUND *output, GLOBAL *global, int *optind);
-int initialisePSF2(GRAIN *grain, GRANSOUND *output, GLOBAL *global, int *optind);
 int closePSF(GRAIN *grain, GRANSOUND *output, GLOBAL *global);
 int setupVariables(GRAIN *grain, GRANSOUND *output, GLOBAL *global, INITPSF *initStruct);
 int allocateGrainMem(GRAIN *grain, GLOBAL *global);

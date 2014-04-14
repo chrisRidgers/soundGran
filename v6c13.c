@@ -3,7 +3,7 @@
 #include <math.h>
 #include <portsf.h>
 #include <getopt.h>
-#include "v6c13b.h"
+#include "v6c13.h"
 
 int main(int argc, char *argv[])
 {
@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
       //Pointer to first frame of grain, adjusts by stepsize each loop
       for(int i = 0; i < grain.numFrames; i++)
       {
-	grainStart[i] 	= grain.panInfo.left * grain.buffer[i];
-	grainStart[i + 1] = grain.panInfo.right * grain.buffer[i];
+	grainStart[2 * i] 		+= grain.panInfo.left * grain.buffer[i];
+	grainStart[2 * i + 1] 		+= grain.panInfo.right * grain.buffer[i];
       }
 
       output.step 	+= output.stepSize;
@@ -185,14 +185,6 @@ int setupVariables(
   setOverloadPSF(initStruct, grain, output, global, &optind);
   initialisePSF(initStruct);
 
-
-  /*initialisePSF(
-    grain, 
-    output, 
-    global,
-    &optind);
-    */
-
   output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
   //printf("%f \n", output->duration);
   global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
@@ -213,42 +205,6 @@ int setupVariables(
   output->bufTest 		= 0;
   grain->bufTest		= 0;
 
-
-  return 0;
-}
-
-int initialisePSF2(
-    GRAIN *grain, 
-    GRANSOUND *output, 
-    GLOBAL *global,
-    int *optind)
-{
-  if(psf_init())
-  {
-    printf("Error: unable to open portsf\n");
-    return 1;
-  }
-
-  grain->inputFile = psf_sndOpen(global->argv[ARG_INPUT + (*optind) - 1], &grain->inprop, 0);
-  if(grain->inputFile < 0)
-  {
-    printf("Error, unable to read %s\n", global->argv[ARG_INPUT + (*optind) - 1]);
-    return 1;
-  }
-
-  output->outprop 	= grain->inprop;
-  output->outprop.chans = 2;
-  output->outputFile 	= psf_sndCreate(
-      global->argv[ARG_OUTPUT + (*optind) - 1], 
-      &output->outprop, 
-      0, 
-      0, 
-      PSF_CREATE_RDWR);
-  if(output->outputFile < 0)
-  {
-    printf("Error, unable to create %s\n", global->argv[ARG_OUTPUT + (*optind) - 1]);
-    return 1;
-  }
 
   return 0;
 }
@@ -314,16 +270,16 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
 int setGrainX(GRAIN *grain)
 {
   grain->panInfo.grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
-  //grain->panInfo.left = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
-  //grain->panInfo.right = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
-
+  grain->panInfo.left = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
+  grain->panInfo.right = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
+  /*
   float piovr2 = M_PI * 0.5;
   float root2ovr2 = sqrt(2.0) * 0.5;
   float thispos = grain->panInfo.grainX * piovr2;
   float angle = thispos * 0.5;
-
-  grain->panInfo.left = root2ovr2 * (cos(angle) - sin(angle));
-  grain->panInfo.right = root2ovr2 * (cos(angle) + sin(angle));
+   */
+  //grain->panInfo.left = root2ovr2 * (cos(angle) - sin(angle));
+  //grain->panInfo.right = root2ovr2 * (cos(angle) + sin(angle));
 
   return 0;
 }
