@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <regex.h>
 #include <math.h>
 #include <portsf.h>
 #include <getopt.h>
@@ -7,54 +9,35 @@
 
 int main(int argc, char *argv[])
 {
-  GLOBAL 	global 		= {
+  GLOBAL global 	= {
     argv, 
     argc,
     1, 
     0, 
     0, 
     0,
-    {{"interactive", 
-       no_argument, 
-       &global.interactive, 
-       1},
-    {"help", 
-      no_argument, 
-      &global.help, 
-      1},
-    {"verbose", 
-      no_argument, 
-      &global.verbose, 
-      1},
-    {0, 
-      0, 
-      0, 
-      0}},
+    {{"interactive", no_argument, &global.interactive, 1},
+      {"help", no_argument, &global.help, 1},
+      {"verbose", no_argument, &global.verbose, 1},
+      {0, 0, 0, 0}},
     0}; 	
-  GRAIN 	grain; 			//Struct to hold grain related variables
-  GRANSOUND 	output 		= {0,0}; 	//Struct to hold variables affecting the output buffer
-  INITPSF	initStruct 	= {T_DEFAULT};
-  /*
-     if(argc!=ARGC)
-     {
-     printf("Please use v6c13.out as: v6c13.out INPUT_WAV OUTPUT_WAV OUTPUT_DURATION(seconds) MINGRAINDURATION(seconds) MAXGRAINDURATION(seconds) GRAINATTACKDURATION(percent) GRAINDECAYDURATION(percent) GRAINDENSITY(grains per second)\n");
 
-     return 1;
-     }
-     */
+  GRAIN grain; 				//Struct to hold grain related variables
+  OUTPUT output 	= {0,0}; 	//Struct to hold variables affecting the output buffer
+  INITPSF initStruct 	= {T_DEFAULT};
 
-  setupVariables(
-      &grain, 
-      &output, 
-      &global,
-      &initStruct);
+  if(setupVariables(
+	&grain, 
+	&output, 
+	&global,
+	&initStruct) == -1) goto cleanup;
 
-  allocateOutputMem(&output, &global); 		//Setting up output buffer
+  allocateOutputMem(&output, &global); 	//Setting up output buffer
 
   while(global.spaceLeft)
   {
     allocateGrainMem(&grain, &global); 	//Setting up grain buffer
-    setupSeek(&grain, &global);                  //Sets random seek for input file
+    setupSeek(&grain, &global);         //Sets random seek for input file
 
     psf_sndSeek(  			//Sets seek for input file
 	grain.inputFile, 
@@ -68,21 +51,22 @@ int main(int argc, char *argv[])
 
     impAttackEnv(&grain, &global); 	//Applies an attack envelope to reduce clipping
     impDecayEnv(&grain, &global);	//Applies a decay envelope to reduce clipping
-    setGrainX(&grain, &global);			//Randomly determines a sound source position (stereo)
+    setGrainX(&grain, &global);		//Randomly determines a sound source position (stereo)
 
     if(output.NumFrames - output.step > grain.numFrames)
     {
       global.spaceLeft 	= 1;		//Just in case variable somehow becomes unset
 
-      float *grainStart = output.buffer + output.step * output.outprop.chans;
-      //Pointer to first frame of grain, adjusts by stepsize each loop
+      float *grainStart = 		//Pointer to first frame of grain, adjusts by stepsize each loop 
+	output.buffer + output.step * output.outprop.chans;
+
       for(int i = 0; i < grain.numFrames; i++)
       {
-	grainStart[2 * i] 		+= grain.panInfo.left * grain.buffer[i] * 0.5;
-	grainStart[2 * i + 1] 		+= grain.panInfo.right * grain.buffer[i] * 0.5;
+	grainStart[2 * i] 	+= grain.panInfo.left * grain.buffer[i] * 0.5;
+	grainStart[2 * i + 1] 	+= grain.panInfo.right * grain.buffer[i] * 0.5;
       }
 
-      output.step 	+= output.stepSize;
+      output.step += output.stepSize;
       //Increases step by stepsize for next grain
     } else
     {
@@ -93,7 +77,7 @@ int main(int argc, char *argv[])
     grain.bufTest 	= 0;
   }
 
-  if(global.verbose == 1) {printf("\n ---------------------------------------------------------- \n Writing output file... \n");}
+  if(global.verbose == 1) printf("\n ---------------------------------------------------------- \n Writing output file... \n");
 
   if(psf_sndWriteFloatFrames(		//Writes output buffer to file
 	output.outputFile, 
@@ -103,7 +87,7 @@ int main(int argc, char *argv[])
     printf("Warning: error writing %s\n", global.argv[ARG_OUTPUT]);
     return 1;
   }
-  
+
   if(global.interactive == 1)
   {
     printf(" Output File written to %s \n", initStruct.outputFile);
@@ -111,7 +95,7 @@ int main(int argc, char *argv[])
   {
     printf(" Output file written to %s \n", global.argv[ARG_OUTPUT + optind - 1]);
   }
-  
+
 
 cleanup:
   cleanUp(				//Frees up memory buffers before programme exit
@@ -125,7 +109,7 @@ cleanup:
 
 int setupVariables(
     GRAIN *grain, 
-    GRANSOUND *output, 
+    OUTPUT *output, 
     GLOBAL *global,
     INITPSF *initStruct)
 {
@@ -176,13 +160,36 @@ int setupVariables(
     initStruct->type = T_INTERACTIVE;
     printf("Running interactively: \n \n");
 
+    char input[64];
+    printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
+    if(fgets(input, sizeof input, stdin) != NULL)
+    {
+    char *endline = strchr(input,'\n');
+    if(endline != NULL) endline = '\0';
+    }
+    regex_t regex;
+    int status;
+    regcomp(&regex, "^[[:alnum:]]{0,64}(.wav$|.aif$)", REG_EXTENDED | REG_NOSUB);
+    status = regexec(&regex, input, 0, NULL, 0);
+    printf("/n %d", status);
+    if(status)
+    {
+    sscanf(input, "%s", global->inputFile);
+    regfree(&regex);
+    }else
+    {
+      return -1;
+    }
+
+
+    /*
     printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
     scanf("%s", global->inputFile);
+    */
 
     printf("\n Please enter a valid output file (less than 20 characters) e.g output.wav: ");
     scanf("%s", global->outputFile);
-
-    printf("\n Please enter a valid output duration e.g 20: ");
+printf("\n Please enter a valid output duration e.g 20: ");
     scanf("%f", &output->duration);
 
     printf("\n Please enter a valid minimum grain duration e.g 0.2: ");
@@ -202,7 +209,20 @@ int setupVariables(
     scanf("%f", &grainDensity);
     output->grainDensity = 1.0 / grainDensity;
 
+    output->bufTest = 0;
+    grain->bufTest = 0;
+
     printf("\n");
+
+  } else {
+    output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
+    global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
+    global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
+    global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
+    global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
+    output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
+    output->bufTest 		= 0;
+    grain->bufTest		= 0;
 
   }
 
@@ -218,17 +238,10 @@ int setupVariables(
       output, 
       global, 
       &optind);
-  initialisePSF(initStruct);
 
-  output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
-  global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
-  global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
-  global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
-  global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
-  output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
+  if(initialisePSF(initStruct) == -1 ) return -1;
   output->stepSize 		= output->grainDensity * output->outprop.srate;
-  output->bufTest 		= 0;
-  grain->bufTest		= 0;
+
 
   if(global->verbose == 1)
   {
@@ -246,9 +259,9 @@ int setupVariables(
   return 0;
 }
 
-int allocateOutputMem(GRANSOUND *output, GLOBAL *global)
+int allocateOutputMem(OUTPUT *output, GLOBAL *global)
 {
-  output->NumFrames 	= (int)output->duration * output->outprop.srate;
+  output->NumFrames 	= (int) output->duration * output->outprop.srate;
   output->buffer 	= (float*) calloc(1, output->NumFrames * output->outprop.chans * sizeof(float));
   output->bufTest	= 1;
 
@@ -409,7 +422,7 @@ int closePSF(INITPSF *initStruct)
 
 int cleanUp(
     GRAIN *grain, 
-    GRANSOUND *output, 
+    OUTPUT *output, 
     GLOBAL *global,
     INITPSF *initStruct)
 {
@@ -424,7 +437,7 @@ int cleanUp(
 int setOverloadPSF(
     INITPSF *initStruct, 
     GRAIN *grain, 
-    GRANSOUND *output, 
+    OUTPUT *output, 
     GLOBAL *global, 
     int *optind)
 {
@@ -453,7 +466,7 @@ int initialisePSF(INITPSF *initStruct)
   if(psf_init())
   {
     printf("Error: unable to open portsf\n");
-    return 1;
+    return -1;
   }
 
   switch(initStruct->type)
@@ -464,7 +477,7 @@ int initialisePSF(INITPSF *initStruct)
       if(initStruct->grain->inputFile < 0)
       {
 	printf("Error, unable to read %s\n", initStruct->global->argv[ARG_INPUT + *(initStruct->optind) - 1]);
-	return 1;
+	return -1;
       }
 
       initStruct->output->outprop 		= initStruct->grain->inprop;
@@ -480,7 +493,7 @@ int initialisePSF(INITPSF *initStruct)
       if(initStruct->output->outputFile < 0)
       {
 	printf("Error, unable to create %s\n", initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1]);
-	return 1;
+	return -1;
       }
 
       if(initStruct->global->verbose == 1)
@@ -503,7 +516,7 @@ int initialisePSF(INITPSF *initStruct)
       if(initStruct->grain->inputFile < 0)
       {
 	printf("Error, unable to read %s\n", initStruct->inputFile);
-	return 1;
+	return -1;
       }
 
       initStruct->output->outprop 		= initStruct->grain->inprop;
@@ -518,7 +531,7 @@ int initialisePSF(INITPSF *initStruct)
       if(initStruct->output->outputFile < 0)
       {
 	printf("Error, unable to create %s\n", initStruct->outputFile);
-	return 1;
+	return -1;
       }
 
       if(initStruct->global->verbose == 1)

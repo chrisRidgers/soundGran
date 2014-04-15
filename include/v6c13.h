@@ -16,8 +16,8 @@ typedef struct GLOBAL
   struct option long_options[4];
   int option_index;
 
-  char inputFile[21];
-  char outputFile[21];
+  char inputFile[64];
+  char outputFile[64];
   float minGrainDur;
   float maxGrainDur;
   int grainAttackPercent;
@@ -52,7 +52,7 @@ typedef struct GRAIN
 
 } GRAIN;
 
-typedef struct GRANSOUND
+typedef struct OUTPUT
 {
   long stepSize;
   long step;
@@ -67,14 +67,14 @@ typedef struct GRANSOUND
   float *buffer;
   int bufTest;
   PSF_PROPS outprop;
-} GRANSOUND;
+} OUTPUT;
 
 typedef struct INITPSF
 {
   int type;
 
   GRAIN *grain;
-  GRANSOUND *output;
+  OUTPUT *output;
   GLOBAL *global;
   int *optind;
 
@@ -82,17 +82,17 @@ typedef struct INITPSF
   char *outputFile;
 } INITPSF;
 
-int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, GRANSOUND *output, GLOBAL *global, int *optind);
-int setupVariables(GRAIN *grain, GRANSOUND *output, GLOBAL *global, INITPSF *initStruct);
+int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, OUTPUT *output, GLOBAL *global, int *optind);
+int setupVariables(GRAIN *grain, OUTPUT *output, GLOBAL *global, INITPSF *initStruct);
 int allocateGrainMem(GRAIN *grain, GLOBAL *global);
-int allocateOutputMem(GRANSOUND *output, GLOBAL *global);
+int allocateOutputMem(OUTPUT *output, GLOBAL *global);
 int setGrainX(GRAIN *grain, GLOBAL *global);
 int setupSeek(GRAIN *grain, GLOBAL *global);
 int impAttackEnv(GRAIN *grain, GLOBAL *global);
 int impDecayEnv(GRAIN *grain, GLOBAL *global);
 int closePSF(INITPSF *initStruct);
 
-int cleanUp(GRAIN *grain, GRANSOUND *output, GLOBAL *global, INITPSF *initStruct);
+int cleanUp(GRAIN *grain, OUTPUT *output, GLOBAL *global, INITPSF *initStruct);
 
 int initialisePSF(INITPSF *initStruct);
 
