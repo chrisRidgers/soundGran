@@ -7,21 +7,33 @@
 
 int main(int argc, char *argv[])
 {
-  GLOBAL 	global = {
+  GLOBAL 	global 		= {
     argv, 
     argc,
     1, 
     0, 
     0, 
     0,
-    { {"interactive", no_argument, &global.interactive, 1},
-      {"help", no_argument, &global.help, 1},
-      {"verbose", no_argument, &global.verbose, 1},
-      {0, 0, 0, 0}},
+    {{"interactive", 
+       no_argument, 
+       &global.interactive, 
+       1},
+    {"help", 
+      no_argument, 
+      &global.help, 
+      1},
+    {"verbose", 
+      no_argument, 
+      &global.verbose, 
+      1},
+    {0, 
+      0, 
+      0, 
+      0}},
     0}; 	
   GRAIN 	grain; 			//Struct to hold grain related variables
-  GRANSOUND 	output = {0,0}; 	//Struct to hold variables affecting the output buffer
-  INITPSF	initStruct = {T_DEFAULT};
+  GRANSOUND 	output 		= {0,0}; 	//Struct to hold variables affecting the output buffer
+  INITPSF	initStruct 	= {T_DEFAULT};
   /*
      if(argc!=ARGC)
      {
@@ -37,12 +49,12 @@ int main(int argc, char *argv[])
       &global,
       &initStruct);
 
-  allocateOutputMem(&output); 		//Setting up output buffer
+  allocateOutputMem(&output, &global); 		//Setting up output buffer
 
   while(global.spaceLeft)
   {
     allocateGrainMem(&grain, &global); 	//Setting up grain buffer
-    setupSeek(&grain);                  //Sets random seek for input file
+    setupSeek(&grain, &global);                  //Sets random seek for input file
 
     psf_sndSeek(  			//Sets seek for input file
 	grain.inputFile, 
@@ -56,7 +68,7 @@ int main(int argc, char *argv[])
 
     impAttackEnv(&grain, &global); 	//Applies an attack envelope to reduce clipping
     impDecayEnv(&grain, &global);	//Applies a decay envelope to reduce clipping
-    setGrainX(&grain);			//Randomly determines a sound source position (stereo)
+    setGrainX(&grain, &global);			//Randomly determines a sound source position (stereo)
 
     if(output.NumFrames - output.step > grain.numFrames)
     {
@@ -81,6 +93,8 @@ int main(int argc, char *argv[])
     grain.bufTest 	= 0;
   }
 
+  if(global.verbose == 1) {printf("\n ---------------------------------------------------------- \n Writing output file... \n");}
+
   if(psf_sndWriteFloatFrames(		//Writes output buffer to file
 	output.outputFile, 
 	output.buffer, 
@@ -89,12 +103,22 @@ int main(int argc, char *argv[])
     printf("Warning: error writing %s\n", global.argv[ARG_OUTPUT]);
     return 1;
   }
+  
+  if(global.interactive == 1)
+  {
+    printf(" Output File written to %s \n", initStruct.outputFile);
+  }else
+  {
+    printf(" Output file written to %s \n", global.argv[ARG_OUTPUT + optind - 1]);
+  }
+  
 
 cleanup:
   cleanUp(				//Frees up memory buffers before programme exit
       &grain, 
       &output, 
-      &global);
+      &global,
+      &initStruct);
 
   return 0;
 }
@@ -182,38 +206,59 @@ int setupVariables(
 
   }
 
-  setOverloadPSF(initStruct, grain, output, global, &optind);
+  if(global->verbose == 1)
+  {
+    printf("\n Running verbosely. \n \n Captain, incoming message... \n");
+    sleep(2);
+  }
+
+  setOverloadPSF(
+      initStruct, 
+      grain, 
+      output, 
+      global, 
+      &optind);
   initialisePSF(initStruct);
 
   output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
-  //printf("%f \n", output->duration);
   global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
-  //printf("%f \n", global->minGrainDur);
   global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
-  //printf("%f \n", global->maxGrainDur);
   global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
-  //printf("%d \n", global->grainAttackPercent);
   global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
-  //printf("%d \n", global->grainDecayPercent);
-
   output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
-  //printf("%f \n", output->grainDensity);
-
-
-
   output->stepSize 		= output->grainDensity * output->outprop.srate;
   output->bufTest 		= 0;
   grain->bufTest		= 0;
 
+  if(global->verbose == 1)
+  {
+    printf("\n Output: \n \t duration: \t \t %f \n \t minGrainDur: \t \t %f \n \t maxGrainDur: \t \t %f \n \t grainAttackPercent: \t %d \n \t grainDecayPercent: \t %d \n \t grainDensity: \t \t %f \n \t stepSize: \t \t %ld \n",
+	output->duration,
+	global->minGrainDur,
+	global->maxGrainDur,
+	global->grainAttackPercent,
+	global->grainDecayPercent,
+	output->grainDensity,
+	output->stepSize);
+    sleep(1);
+  }
 
   return 0;
 }
 
-int allocateOutputMem(GRANSOUND *output)
+int allocateOutputMem(GRANSOUND *output, GLOBAL *global)
 {
   output->NumFrames 	= (int)output->duration * output->outprop.srate;
   output->buffer 	= (float*) calloc(1, output->NumFrames * output->outprop.chans * sizeof(float));
   output->bufTest	= 1;
+
+  if(global->verbose == 1)
+  {
+    printf("\t outputNumFrames \t %d \n \t outputBufferSize \t %ld \n",
+	output->NumFrames,
+	output->NumFrames * output->outprop.chans * sizeof(float));
+    sleep(1);
+  }
 
   return 0;
 }
@@ -225,13 +270,28 @@ int allocateGrainMem(GRAIN *grain, GLOBAL *global)
   grain->buffer 	= (float*) malloc(grain->numFrames * grain->inprop.chans * sizeof(float));
   grain->bufTest	= 1;
 
+  if(global->verbose == 1)
+  {
+    printf("\n Grain: \n \t Grain Duration: \t %f \n \t Grain numFrames: \t %d \n \t Grain Buffer Size: \t %ld \n",
+	grain->grainDur,
+	grain->numFrames,
+	grain->numFrames * grain -> inprop.chans * sizeof(float));
+  }
+
   return 0;
 }
 
-int setupSeek(GRAIN *grain)
+int setupSeek(GRAIN *grain, GLOBAL *global)
 {
   grain->maxSeek 	= psf_sndSize(grain->inputFile) - grain->numFrames;
   grain->seekOffset 	= ((float) grain->maxSeek * rand()) / RAND_MAX;
+
+  if(global->verbose == 1)
+  {
+    printf("\t Grain maxSeek size: \t %d \n \t Grain seek offset: \t %d \n",
+	grain->maxSeek,
+	grain->seekOffset);
+  }
 
   return 0;
 }
@@ -246,6 +306,12 @@ int impAttackEnv(GRAIN *grain, GLOBAL *global)
   {
     grain->buffer[i] 	= factor * grain->buffer[i];
     factor 		+= increment;
+  }
+
+  if(global->verbose == 1)
+  {
+    printf("\t Grain Attack Frames: \t %ld \n",
+	grainAttack);
   }
 
   return 0;
@@ -264,73 +330,118 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
     factor 		-= increment;
   }
 
+  if(global->verbose == 1)
+  {
+    printf("\t Grain Decay Frames: \t %ld \n",
+	grainDecay);
+  }
   return 0;
 }
 
-int setGrainX(GRAIN *grain)
+int setGrainX(GRAIN *grain, GLOBAL *global)
 {
   grain->panInfo.grainX = (-1.0f) + (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
-  grain->panInfo.left = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
-  grain->panInfo.right = (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
+  grain->panInfo.left 	= (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
+  grain->panInfo.right 	= (sqrt(2.0) / 2) * (cos(grain->panInfo.grainX) + sin(grain->panInfo.grainX)) * 0.5;
 
-  return 0;
-}
-
-int closePSF(
-    GRAIN *grain, 
-    GRANSOUND *output, 
-    GLOBAL *global)
-{
-  if(grain->inputFile >= 0)
+  if(global->verbose == 1)
   {
-    if(psf_sndClose(grain->inputFile))
-    {
-      printf("Warning error closing %s\n", global->argv[ARG_INPUT + optind - 1]);
-    }
-  }
-  if(output->outputFile >= 0)
-  {
-    if(psf_sndClose(output->outputFile))
-    {
-      printf("Warning error closing %s\n", global->argv[ARG_OUTPUT + optind - 1]);
-    }
-    printf("Closed fine \n");
+    printf("\t Grain X: \t \t %f \n \t Grain factor left: \t %f \n \t Grain factor right: \t %f \n",
+	grain->panInfo.grainX,
+	grain->panInfo.left,
+	grain->panInfo.right);
   }
 
-  psf_finish();
-
   return 0;
 }
 
-int cleanUp(GRAIN *grain, GRANSOUND *output, GLOBAL *global)
-{
-  if(output->bufTest)free(output->buffer), output->bufTest 	= 0;
-  if(grain->bufTest)free(grain->buffer), grain->bufTest 	= 0;
-
-  closePSF(
-      grain, 
-      output, 
-      global);
-
-  return 0;
-}
-
-int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, GRANSOUND *output, GLOBAL *global, int *optind)
+int closePSF(INITPSF *initStruct)
 {
   switch(initStruct->type)
   {
     case T_DEFAULT:
-      initStruct->grain = grain;
-      initStruct->output = output;
-      initStruct->global = global;
-      initStruct->optind = optind;
+
+
+      if(initStruct->grain->inputFile >= 0)
+      {
+	if(initStruct->global->verbose == 1) printf("\n Closing input file... \n");
+	if(psf_sndClose(initStruct->grain->inputFile))
+	{
+	  printf("Warning error closing %s\n", initStruct->global->argv[ARG_INPUT + optind - 1]);
+	}
+      }
+      if(initStruct->output->outputFile >= 0)
+      {
+	if(initStruct->global->verbose == 1) printf(" Closing output file... \n");
+	if(psf_sndClose(initStruct->output->outputFile))
+	{
+	  printf("Warning error closing %s\n", initStruct->global->argv[ARG_OUTPUT + optind - 1]);
+	}
+      }
+
+      break;
+
+    case T_INTERACTIVE:
+
+      if(initStruct->grain->inputFile >= 0)
+      {
+	if(initStruct->global->verbose == 1) printf("\n Closing input file... \n");
+	if(psf_sndClose(initStruct->grain->inputFile))
+	{
+	  printf("Warning error closing %s\n", initStruct->inputFile);
+	}
+      }
+      if(initStruct->output->outputFile >= 0)
+      {
+	if(initStruct->global->verbose == 1) printf(" Closing output file... \n");
+	if(psf_sndClose(initStruct->output->outputFile))
+	{
+	  printf("Warning error closing %s\n", initStruct->outputFile);
+	}
+      }
+
+      break;
+  }
+
+  return 0;
+
+}
+
+int cleanUp(
+    GRAIN *grain, 
+    GRANSOUND *output, 
+    GLOBAL *global,
+    INITPSF *initStruct)
+{
+  if(output->bufTest)free(output->buffer), output->bufTest 	= 0;
+  if(grain->bufTest)free(grain->buffer), grain->bufTest 	= 0;
+
+  closePSF(initStruct);
+
+  return 0;
+}
+
+int setOverloadPSF(
+    INITPSF *initStruct, 
+    GRAIN *grain, 
+    GRANSOUND *output, 
+    GLOBAL *global, 
+    int *optind)
+{
+  switch(initStruct->type)
+  {
+    case T_DEFAULT:
+      initStruct->grain 	= grain;
+      initStruct->output 	= output;
+      initStruct->global 	= global;
+      initStruct->optind 	= optind;
       break;
     case T_INTERACTIVE:
-      initStruct->grain = grain;
-      initStruct->output = output;
-      initStruct->global = global;
-      initStruct->inputFile = global->inputFile;
-      initStruct->outputFile = global->outputFile;
+      initStruct->grain 	= grain;
+      initStruct->output 	= output;
+      initStruct->global 	= global;
+      initStruct->inputFile 	= global->inputFile;
+      initStruct->outputFile 	= global->outputFile;
       break;
   }
 
@@ -356,10 +467,10 @@ int initialisePSF(INITPSF *initStruct)
 	return 1;
       }
 
-      initStruct->output->outprop 	= initStruct->grain->inprop;
-      initStruct->output->outprop.chans = 2;
-      initStruct->output->outprop.format = PSF_WAVE_EX;
-      initStruct->output->outputFile 	= psf_sndCreate(
+      initStruct->output->outprop 		= initStruct->grain->inprop;
+      initStruct->output->outprop.chans 	= 2;
+      initStruct->output->outprop.format 	= PSF_WAVE_EX;
+      initStruct->output->outputFile 		= psf_sndCreate(
 	  initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1], 
 	  &initStruct->output->outprop, 
 	  1, 
@@ -372,21 +483,33 @@ int initialisePSF(INITPSF *initStruct)
 	return 1;
       }
 
+      if(initStruct->global->verbose == 1)
+      {
+	printf("\n inprop: \t \t \t \t \t outprop: \n \t inprop.name: \t \t %s \t \t outprop.name: \t \t %s \t \n \t inprop.chans: \t \t %d \t \t \t outprop.chans: \t %d \t \n \t inprop.srate: \t \t %d \t \t \t outprop.srate: \t %d \t \n",
+	    initStruct->global->argv[ARG_INPUT+ *(initStruct->optind) - 1],
+	    initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1],
+	    initStruct->grain->inprop.chans,
+	    initStruct->output->outprop.chans,
+	    initStruct->grain->inprop.srate,
+	    initStruct->output->outprop.srate);
+	sleep(1);
+      }
+
       break;
 
     case T_INTERACTIVE:
 
-      initStruct->grain->inputFile = psf_sndOpen(initStruct->inputFile, &initStruct->grain->inprop, 0); //??????
+      initStruct->grain->inputFile = psf_sndOpen(initStruct->inputFile, &initStruct->grain->inprop, 0); 
       if(initStruct->grain->inputFile < 0)
       {
 	printf("Error, unable to read %s\n", initStruct->inputFile);
 	return 1;
       }
 
-      initStruct->output->outprop 	= initStruct->grain->inprop;
-      initStruct->output->outprop.chans = 2;
-      initStruct->output->outprop.format = PSF_WAVE_EX;
-      initStruct->output->outputFile 	= psf_sndCreate(
+      initStruct->output->outprop 		= initStruct->grain->inprop;
+      initStruct->output->outprop.chans 	= 2;
+      initStruct->output->outprop.format 	= PSF_WAVE_EX;
+      initStruct->output->outputFile 		= psf_sndCreate(
 	  initStruct->outputFile, 
 	  &initStruct->output->outprop, 
 	  1, 
@@ -396,6 +519,18 @@ int initialisePSF(INITPSF *initStruct)
       {
 	printf("Error, unable to create %s\n", initStruct->outputFile);
 	return 1;
+      }
+
+      if(initStruct->global->verbose == 1)
+      {
+	printf("\n inprop: \t \t \t \t \t outprop: \n \t inprop.name: \t \t %s \t \t outprop.name: \t \t %s \t \n \t inprop.chans: \t \t %d \t \t \t outprop.chans: \t %d \t \n \t inprop.srate: \t \t %d \t \t \t outprop.srate: \t %d \t \n",
+	    initStruct->inputFile,
+	    initStruct->outputFile,
+	    initStruct->grain->inprop.chans,
+	    initStruct->output->outprop.chans,
+	    initStruct->grain->inprop.srate,
+	    initStruct->output->outprop.srate);
+	sleep(1);
       }
 
       break;

@@ -83,16 +83,16 @@ typedef struct INITPSF
 } INITPSF;
 
 int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, GRANSOUND *output, GLOBAL *global, int *optind);
-int closePSF(GRAIN *grain, GRANSOUND *output, GLOBAL *global);
 int setupVariables(GRAIN *grain, GRANSOUND *output, GLOBAL *global, INITPSF *initStruct);
 int allocateGrainMem(GRAIN *grain, GLOBAL *global);
-int allocateOutputMem(GRANSOUND *output);
-int setGrainX(GRAIN *grain);
-int setupSeek(GRAIN *grain);
+int allocateOutputMem(GRANSOUND *output, GLOBAL *global);
+int setGrainX(GRAIN *grain, GLOBAL *global);
+int setupSeek(GRAIN *grain, GLOBAL *global);
 int impAttackEnv(GRAIN *grain, GLOBAL *global);
 int impDecayEnv(GRAIN *grain, GLOBAL *global);
+int closePSF(INITPSF *initStruct);
 
-int cleanUp(GRAIN *grain, GRANSOUND *output, GLOBAL *global);
+int cleanUp(GRAIN *grain, GRANSOUND *output, GLOBAL *global, INITPSF *initStruct);
 
 int initialisePSF(INITPSF *initStruct);
 
