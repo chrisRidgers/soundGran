@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
   GLOBAL global 	= {
     argv, 
     argc,
+    0,
     1, 
     0, 
     0, 
@@ -159,47 +160,140 @@ int setupVariables(
   {
     initStruct->type = T_INTERACTIVE;
     printf("Running interactively: \n \n");
+    char userInput[64];
+    global->userInput = &userInput[0];
 
-    char input[64];
-    printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
-    if(fgets(input, sizeof input, stdin) != NULL)
+    int inputValid = 0;
+    global->pattern = (char*) malloc(31 * sizeof(char));
+    strncpy(global->pattern, "^[[:alnum:]]{1,64}(.wav$|.aif$)", 31 * sizeof(char));
+    while(inputValid == 0)
     {
-    char *endline = strchr(input,'\n');
-    if(endline != NULL) endline = '\0';
+      printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
+      
+      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      {
+	char *endline = strchr(userInput,'\n');
+	if(endline != NULL) *endline = '\0';
+     }
+
+      if(match(global, output) == 0)
+      {
+	sscanf(userInput, "%s", global->inputFile);
+	inputValid = 1;
+      }else
+      {
+	printf("Input not valid, try again\n");
+      }
     }
-    regex_t regex;
-    int status;
-    regcomp(&regex, "^[[:alnum:]]{0,64}(.wav$|.aif$)", REG_EXTENDED | REG_NOSUB);
-    status = regexec(&regex, input, 0, NULL, 0);
-    printf("/n %d", status);
-    if(status)
+
+    inputValid = 0;
+    while(inputValid == 0)
     {
-    sscanf(input, "%s", global->inputFile);
-    regfree(&regex);
-    }else
-    {
-      return -1;
+      printf("\n Please enter a valid output file (less than 20 characters) e.g output.wav: ");
+      
+      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      {
+	char *endline = strchr(userInput, '\n');
+	if(endline != NULL) *endline = '\0';
+      }
+
+      if(match(global, output) == 0)
+      {
+	sscanf(userInput, "%s", global->outputFile);
+	inputValid = 1;
+      }else
+      {
+	printf("Input not valid, try again \n");
+      }
     }
 
+    free(global->pattern);
 
-    /*
-    printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
-    scanf("%s", global->inputFile);
-    */
+    inputValid = 0;
+    global->pattern = (char*) malloc(51 * sizeof(char));
+    strncpy(global->pattern, "^[[:digit:]]{1,}($|([.]{0,1}[[:digit:]]{1,}){0,1}$)", 51 * sizeof(char));
+    while(inputValid == 0)
+    {
+      printf("\n Please enter a valid output duration e.g 20: ");
 
-    printf("\n Please enter a valid output file (less than 20 characters) e.g output.wav: ");
-    scanf("%s", global->outputFile);
-printf("\n Please enter a valid output duration e.g 20: ");
-    scanf("%f", &output->duration);
+      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      {
+	char *endline = strchr(userInput, '\n');
+	if(endline != NULL) *endline = '\0';
+      }
 
-    printf("\n Please enter a valid minimum grain duration e.g 0.2: ");
-    scanf("%f", &global->minGrainDur);
+      if(match(global, output) == 0)
+      {
+	sscanf(userInput, "%f", &output->duration);
+	inputValid = 1;
+      }else
+      {
+	printf("Input not valid, try again \n");
+      }
+    }
 
-    printf("\n Please enter a valid maximum grain duration e.g 0.4: ");
-    scanf("%f", &global->maxGrainDur);
+    inputValid = 0;
+    while(inputValid == 0)
+    {
+      printf("\n Please enter a valid minimum grain duration e.g 0.2: ");
+      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      {
+	char *endline = strchr(userInput, '\n');
+	if(endline != NULL) *endline = '\0';
+      }
 
-    printf("\n Please enter a valid percentage value for the grain attack envelope e.g 10: ");
-    scanf("%d", &global->grainAttackPercent);
+      if(match(global, output) == 0)
+      {
+	sscanf(userInput, "%f", &global->minGrainDur);
+	inputValid = 1;
+      }else
+      {
+	printf("Input not valid, try again \n");
+      }
+    }
+
+    inputValid = 0;
+    while(inputValid == 0)
+    {
+      printf("\n Please enter a valid maximum grain duration e.g 0.4: ");
+      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      {
+	char *endline = strchr(userInput, '\n');
+	if(endline != NULL) *endline = '\0';
+      }
+
+      if(match(global, output) == 0)
+      {
+	sscanf(userInput, "%f", &global->maxGrainDur);
+	inputValid = 1;
+      }else
+      {
+	printf("Input not valid, try again \n");
+      }
+    }
+    free(global->pattern);
+
+    inputValid = 0;
+    global->pattern = (char*) malloc(17 * sizeof(char));
+    strncpy(global->pattern, "^[[:digit:]]{1,}$", 17 * sizeof(char));
+    while(inputValid == 0)
+    {
+      printf("\n Please enter a valid percentage value for the grain attack envelope e.g 10: ");
+      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      {
+	char *endline = strchr(userInput, '\n');
+	if(endline != NULL) *endline = '\0';
+      }
+
+      if(match(global, output) == 0)
+      {
+	sscanf(userInput, "%d", &global->grainAttackPercent);
+	inputValid = 1;
+      }else
+      {
+	printf("Input not valid, try again \n");
+      }
+    }
 
     printf("\n Please enter a valid percentage value for the graind decay envelope e.g 10: ");
     scanf("%d", &global->grainDecayPercent);
@@ -429,7 +523,7 @@ int cleanUp(
   if(output->bufTest)free(output->buffer), output->bufTest 	= 0;
   if(grain->bufTest)free(grain->buffer), grain->bufTest 	= 0;
 
-  closePSF(initStruct);
+  if(global->psfInitialized == 1) closePSF(initStruct);
 
   return 0;
 }
@@ -508,6 +602,8 @@ int initialisePSF(INITPSF *initStruct)
 	sleep(1);
       }
 
+      initStruct->global->psfInitialized = 1;
+
       break;
 
     case T_INTERACTIVE:
@@ -546,9 +642,34 @@ int initialisePSF(INITPSF *initStruct)
 	sleep(1);
       }
 
+      initStruct->global->psfInitialized = 1;
+
       break;
   }
 
   return 0;
 }
+
+int match(GLOBAL *global, OUTPUT *output)
+{
+  int status;
+
+  if(regcomp(
+	&global->re, 
+	global->pattern,
+	REG_EXTENDED|REG_NOSUB) != 0)
+  {
+    return(-1);
+  }
+
+  status = regexec(&global->re, global->userInput, 0, NULL, 0);
+  regfree(&global->re);
+  if(status != 0)
+  {
+    return(-1);
+  }
+
+  return(0);
+}
+
 

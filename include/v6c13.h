@@ -9,6 +9,7 @@ typedef struct GLOBAL
 {
   char **argv;
   int argc;
+  int psfInitialized;
   int spaceLeft;
   int help;
   int interactive;
@@ -16,6 +17,9 @@ typedef struct GLOBAL
   struct option long_options[4];
   int option_index;
 
+  char *userInput;
+  char *pattern;
+  regex_t re;
   char inputFile[64];
   char outputFile[64];
   float minGrainDur;
@@ -95,6 +99,8 @@ int closePSF(INITPSF *initStruct);
 int cleanUp(GRAIN *grain, OUTPUT *output, GLOBAL *global, INITPSF *initStruct);
 
 int initialisePSF(INITPSF *initStruct);
+
+int match(GLOBAL *global, OUTPUT *output);
 
 
 
