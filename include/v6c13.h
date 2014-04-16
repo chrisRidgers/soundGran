@@ -14,6 +14,8 @@ typedef struct GLOBAL
   int help;
   int interactive;
   int verbose;
+  int userInputTest;
+  int patternTest;
   struct option long_options[4];
   int option_index;
 
@@ -101,6 +103,8 @@ int cleanUp(GRAIN *grain, OUTPUT *output, GLOBAL *global, INITPSF *initStruct);
 int initialisePSF(INITPSF *initStruct);
 
 int match(GLOBAL *global, OUTPUT *output);
+
+int validate(GLOBAL *global, OUTPUT *output);
 
 
 

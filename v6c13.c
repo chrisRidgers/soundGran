@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +17,8 @@ int main(int argc, char *argv[])
     1, 
     0, 
     0, 
+    0,
+    0,
     0,
     {{"interactive", no_argument, &global.interactive, 1},
       {"help", no_argument, &global.help, 1},
@@ -58,8 +61,8 @@ int main(int argc, char *argv[])
     {
       global.spaceLeft 	= 1;		//Just in case variable somehow becomes unset
 
-      float *grainStart = 		//Pointer to first frame of grain, adjusts by stepsize each loop 
-	output.buffer + output.step * output.outprop.chans;
+      float *grainStart =  output.buffer + output.step * output.outprop.chans;             
+      					//Pointer to first frame of grain, adjusts by stepsize each loop 
 
       for(int i = 0; i < grain.numFrames; i++)
       {
@@ -158,31 +161,29 @@ int setupVariables(
   }
   if(global->interactive)
   {
-    initStruct->type = T_INTERACTIVE;
     printf("Running interactively: \n \n");
-    char userInput[64];
-    global->userInput = &userInput[0];
+    
+    initStruct->type 		= T_INTERACTIVE;
+    global->userInput 		= (char*) malloc(_POSIX_NAME_MAX * sizeof(char));;
+    global->userInputTest 	= 1;
 
-    int inputValid = 0;
-    global->pattern = (char*) malloc(31 * sizeof(char));
+    int inputValid 		= 0;
+    global->pattern 		= (char*) malloc(31 * sizeof(char));
+    global->patternTest 	= 1;
     strncpy(global->pattern, "^[[:alnum:]]{1,64}(.wav$|.aif$)", 31 * sizeof(char));
     while(inputValid == 0)
     {
       printf("Please enter a valid input file (less than 20 characters) e.g sample.wav OR ./path/to/sample.wav: ");
-      
-      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      switch(validate(global, output))
       {
-	char *endline = strchr(userInput,'\n');
-	if(endline != NULL) *endline = '\0';
-     }
-
-      if(match(global, output) == 0)
-      {
-	sscanf(userInput, "%s", global->inputFile);
-	inputValid = 1;
-      }else
-      {
-	printf("Input not valid, try again\n");
+	case 0:
+	  sscanf(global->userInput, "%s", global->inputFile);
+	  inputValid = 1;
+	  break;
+	case 1:
+	  break;
+	default:
+	  return -1;
       }
     }
 
@@ -190,45 +191,43 @@ int setupVariables(
     while(inputValid == 0)
     {
       printf("\n Please enter a valid output file (less than 20 characters) e.g output.wav: ");
-      
-      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      switch(validate(global, output))
       {
-	char *endline = strchr(userInput, '\n');
-	if(endline != NULL) *endline = '\0';
-      }
+	case 0:
+	  sscanf(global->userInput, "%s", global->outputFile);
+	  inputValid = 1;
+	  break;
 
-      if(match(global, output) == 0)
-      {
-	sscanf(userInput, "%s", global->outputFile);
-	inputValid = 1;
-      }else
-      {
-	printf("Input not valid, try again \n");
+	case 1:
+	  break;
+
+	default:
+	  return -1;
       }
     }
 
     free(global->pattern);
+    global->patternTest = 0;
 
-    inputValid = 0;
-    global->pattern = (char*) malloc(51 * sizeof(char));
-    strncpy(global->pattern, "^[[:digit:]]{1,}($|([.]{0,1}[[:digit:]]{1,}){0,1}$)", 51 * sizeof(char));
+    inputValid 		= 0;
+    global->pattern 	= (char*) malloc(46 * sizeof(char));
+    global->patternTest = 1;
+    strncpy(global->pattern, "^[[:digit:]]{1,}($|([.][[:digit:]]{1,}){0,1}$)", 46 * sizeof(char));
     while(inputValid == 0)
     {
       printf("\n Please enter a valid output duration e.g 20: ");
+      switch(validate(global, output))
+      {
+	case 0:
+	  sscanf(global->userInput, "%f", &output->duration);
+	  inputValid = 1;
+	  break;
 
-      if(fgets(userInput, sizeof userInput, stdin) != NULL)
-      {
-	char *endline = strchr(userInput, '\n');
-	if(endline != NULL) *endline = '\0';
-      }
+	case 1:
+	  break;
 
-      if(match(global, output) == 0)
-      {
-	sscanf(userInput, "%f", &output->duration);
-	inputValid = 1;
-      }else
-      {
-	printf("Input not valid, try again \n");
+	default:
+	  return -1;
       }
     }
 
@@ -236,19 +235,18 @@ int setupVariables(
     while(inputValid == 0)
     {
       printf("\n Please enter a valid minimum grain duration e.g 0.2: ");
-      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      switch(validate(global, output))
       {
-	char *endline = strchr(userInput, '\n');
-	if(endline != NULL) *endline = '\0';
-      }
+	case 0:
+	  sscanf(global->userInput, "%f", &global->minGrainDur);
+	  inputValid = 1;
+	  break;
 
-      if(match(global, output) == 0)
-      {
-	sscanf(userInput, "%f", &global->minGrainDur);
-	inputValid = 1;
-      }else
-      {
-	printf("Input not valid, try again \n");
+	case 1:
+	  break;
+
+	default:
+	  return -1;
       }
     }
 
@@ -256,65 +254,101 @@ int setupVariables(
     while(inputValid == 0)
     {
       printf("\n Please enter a valid maximum grain duration e.g 0.4: ");
-      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      switch(validate(global, output))
       {
-	char *endline = strchr(userInput, '\n');
-	if(endline != NULL) *endline = '\0';
-      }
+	case 0:
+	  sscanf(global->userInput, "%f", &global->maxGrainDur);
+	  inputValid = 1;
+	  break;
 
-      if(match(global, output) == 0)
-      {
-	sscanf(userInput, "%f", &global->maxGrainDur);
-	inputValid = 1;
-      }else
-      {
-	printf("Input not valid, try again \n");
+	case 1:
+	  break;
+
+	default:
+	  return -1;
       }
     }
     free(global->pattern);
+    global->patternTest = 0;
 
-    inputValid = 0;
-    global->pattern = (char*) malloc(17 * sizeof(char));
+    inputValid 		= 0;
+    global->pattern 	= (char*) malloc(17 * sizeof(char));
+    global->patternTest = 1;
     strncpy(global->pattern, "^[[:digit:]]{1,}$", 17 * sizeof(char));
     while(inputValid == 0)
     {
       printf("\n Please enter a valid percentage value for the grain attack envelope e.g 10: ");
-      if(fgets(userInput, sizeof userInput, stdin) != NULL)
+      switch(validate(global, output))
       {
-	char *endline = strchr(userInput, '\n');
-	if(endline != NULL) *endline = '\0';
-      }
+	case 0:
+	  sscanf(global->userInput, "%d", &global->grainAttackPercent);
+	  inputValid = 1;
+	  break;
 
-      if(match(global, output) == 0)
-      {
-	sscanf(userInput, "%d", &global->grainAttackPercent);
-	inputValid = 1;
-      }else
-      {
-	printf("Input not valid, try again \n");
+	case 1:
+	  break;
+
+	default:
+	  return -1;
       }
     }
 
-    printf("\n Please enter a valid percentage value for the graind decay envelope e.g 10: ");
-    scanf("%d", &global->grainDecayPercent);
+    inputValid = 0;
+    while(inputValid == 0)
+    {
+      printf("\n Please enter a valid percentage value for the graind decay envelope e.g 10: ");
+      switch(validate(global, output))
+      {
+	case 0:
+	  sscanf(global->userInput, "%d", &global->grainDecayPercent);
+	  inputValid = 1;
+	  break;
 
-    printf("\n Please enter a valid value for the number of grains per second e.g 25: ");
-    float grainDensity;
-    scanf("%f", &grainDensity);
-    output->grainDensity = 1.0 / grainDensity;
+	case 1:
+	  break;
 
-    output->bufTest = 0;
-    grain->bufTest = 0;
+	default:
+	  return -1;
+      }
+    }
+
+    inputValid = 0;
+    while(inputValid == 0)
+    {
+      printf("\n Please enter a valid value for the number of grains per second e.g 25: ");
+      int grainDensity;
+      switch(validate(global, output))
+      {
+	case 0:
+	  sscanf(global->userInput, "%d", &grainDensity);
+	  output->grainDensity = 1.0 / grainDensity;
+	  inputValid = 1;
+	  break;
+
+	case 1:
+	  break;
+
+	default:
+	  return -1;
+      }
+    }
+    free(global->pattern);
+    global->patternTest 	= 0;
+    free(global->userInput);
+    global->userInputTest 	= 0;
+
+    output->bufTest 	= 0;
+    grain->bufTest 	= 0;
 
     printf("\n");
 
   } else {
     output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
-    global->minGrainDur 		= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
-    global->maxGrainDur 		= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
+    global->minGrainDur 	= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
+    global->maxGrainDur 	= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
     global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
     global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
-    output->grainDensity 		= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
+    output->grainDensity 	= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
     output->bufTest 		= 0;
     grain->bufTest		= 0;
 
@@ -339,7 +373,17 @@ int setupVariables(
 
   if(global->verbose == 1)
   {
-    printf("\n Output: \n \t duration: \t \t %f \n \t minGrainDur: \t \t %f \n \t maxGrainDur: \t \t %f \n \t grainAttackPercent: \t %d \n \t grainDecayPercent: \t %d \n \t grainDensity: \t \t %f \n \t stepSize: \t \t %ld \n",
+    printf("\
+	\n \
+	Output: \n \
+	duration: \t \t %f \
+	\n \t minGrainDur: \t \t %f \
+	\n \t maxGrainDur: \t \t %f \
+	\n \t grainAttackPercent: \t %d \
+	\n \t grainDecayPercent: \t %d \
+	\n \t grainDensity: \t \t %f \
+	\n \t stepSize: \t \t %ld \
+	\n",
 	output->duration,
 	global->minGrainDur,
 	global->maxGrainDur,
@@ -379,7 +423,12 @@ int allocateGrainMem(GRAIN *grain, GLOBAL *global)
 
   if(global->verbose == 1)
   {
-    printf("\n Grain: \n \t Grain Duration: \t %f \n \t Grain numFrames: \t %d \n \t Grain Buffer Size: \t %ld \n",
+    printf("\
+	\n Grain: \
+	\n \t Grain Duration: \t %f \
+	\n \t Grain numFrames: \t %d \
+	\n \t Grain Buffer Size: \t %ld \
+	\n",
 	grain->grainDur,
 	grain->numFrames,
 	grain->numFrames * grain -> inprop.chans * sizeof(float));
@@ -520,8 +569,10 @@ int cleanUp(
     GLOBAL *global,
     INITPSF *initStruct)
 {
-  if(output->bufTest)free(output->buffer), output->bufTest 	= 0;
-  if(grain->bufTest)free(grain->buffer), grain->bufTest 	= 0;
+  if(output->bufTest) free(output->buffer), output->bufTest 			= 0;
+  if(grain->bufTest) free(grain->buffer), grain->bufTest 			= 0;
+  if(global->patternTest) free(global->pattern), global->patternTest 		= 0;
+  if(global->userInputTest) free(global->userInput), global->userInputTest 	= 0;
 
   if(global->psfInitialized == 1) closePSF(initStruct);
 
@@ -592,7 +643,12 @@ int initialisePSF(INITPSF *initStruct)
 
       if(initStruct->global->verbose == 1)
       {
-	printf("\n inprop: \t \t \t \t \t outprop: \n \t inprop.name: \t \t %s \t \t outprop.name: \t \t %s \t \n \t inprop.chans: \t \t %d \t \t \t outprop.chans: \t %d \t \n \t inprop.srate: \t \t %d \t \t \t outprop.srate: \t %d \t \n",
+	printf("\
+	    \n inprop: \t \t \t \t \t outprop: \
+	    \n \t inprop.name: \t \t %s \t \t outprop.name: \t \t %s \t \
+	    \n \t inprop.chans: \t \t %d \t \t \t outprop.chans: \t %d \t \
+	    \n \t inprop.srate: \t \t %d \t \t \t outprop.srate: \t %d \t \
+	    \n",
 	    initStruct->global->argv[ARG_INPUT+ *(initStruct->optind) - 1],
 	    initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1],
 	    initStruct->grain->inprop.chans,
@@ -632,7 +688,12 @@ int initialisePSF(INITPSF *initStruct)
 
       if(initStruct->global->verbose == 1)
       {
-	printf("\n inprop: \t \t \t \t \t outprop: \n \t inprop.name: \t \t %s \t \t outprop.name: \t \t %s \t \n \t inprop.chans: \t \t %d \t \t \t outprop.chans: \t %d \t \n \t inprop.srate: \t \t %d \t \t \t outprop.srate: \t %d \t \n",
+	printf("\
+	    \n inprop: \t \t \t \t \t outprop: \
+	    \n \t inprop.name: \t \t %s \t \t outprop.name: \t \t %s \t \
+	    \n \t inprop.chans: \t \t %d \t \t \t outprop.chans: \t %d \t \
+	    \n \t inprop.srate: \t \t %d \t \t \t outprop.srate: \t %d \t \
+	    \n",
 	    initStruct->inputFile,
 	    initStruct->outputFile,
 	    initStruct->grain->inprop.chans,
@@ -672,4 +733,22 @@ int match(GLOBAL *global, OUTPUT *output)
   return(0);
 }
 
+int validate(GLOBAL *global, OUTPUT *output)
+{
 
+  if(fgets(global->userInput, _POSIX_NAME_MAX * sizeof(char), stdin) != NULL)
+  {
+    char *endline = strchr(global->userInput,'\n');
+    if(endline != NULL) *endline = '\0';
+  }
+
+  if(match(global, output) == 0)
+  {
+    return(0);
+  }else
+  {
+    printf("Input not valid, try again\n");
+    return(1);
+  }
+
+}
