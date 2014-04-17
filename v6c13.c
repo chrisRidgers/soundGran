@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
       global.spaceLeft 	= 1;		//Just in case variable somehow becomes unset
 
       float *grainStart =  output.buffer + output.step * output.outprop.chans;             
-      					//Pointer to first frame of grain, adjusts by stepsize each loop 
+      //Pointer to first frame of grain, adjusts by stepsize each loop 
 
       for(int i = 0; i < grain.numFrames; i++)
       {
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
       }
 
       output.step += output.stepSize;   //Increases step by stepsize for next grain
-      				       
+
     } else
     {
       global.spaceLeft 	= 0;		//Prevents loop from running once finished
@@ -99,7 +99,6 @@ int main(int argc, char *argv[])
   {
     printf(" Output file written to %s \n", global.argv[ARG_OUTPUT + optind - 1]);
   }
-
 
 cleanup:
   cleanUp(				//Frees up memory buffers before programme exit
@@ -182,7 +181,7 @@ int setupVariables(
   if(global->interactive)
   {
     printf("Running interactively: \n \n");
-    
+
     initStruct->type 		= T_INTERACTIVE;
     global->userInput 		= (char*) malloc(_POSIX_NAME_MAX * sizeof(char));;
     global->userInputTest 	= 1;
@@ -390,7 +389,6 @@ int setupVariables(
   if(initialisePSF(initStruct) == -1 ) return -1;
   output->stepSize 		= output->grainDensity * output->outprop.srate;
 
-
   if(global->verbose == 1)
   {
     printf("\
@@ -507,8 +505,7 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
 
   if(global->verbose == 1)
   {
-    printf("\t Grain Decay Frames: \t %ld \n",
-	grainDecay);
+    printf("\t Grain Decay Frames: \t %ld \n", grainDecay);
   }
   return 0;
 }
@@ -535,7 +532,6 @@ int closePSF(INITPSF *initStruct)
   switch(initStruct->type)
   {
     case T_DEFAULT:
-
 
       if(initStruct->grain->inputFile >= 0)
       {
@@ -579,7 +575,6 @@ int closePSF(INITPSF *initStruct)
   }
 
   return 0;
-
 }
 
 int cleanUp(
@@ -754,7 +749,6 @@ int match(GLOBAL *global, OUTPUT *output)
 
 int validate(GLOBAL *global, OUTPUT *output)
 {
-
   if(fgets(global->userInput, _POSIX_NAME_MAX * sizeof(char), stdin) != NULL)
   {
     char *endline = strchr(global->userInput,'\n');
@@ -769,5 +763,4 @@ int validate(GLOBAL *global, OUTPUT *output)
     printf("Input not valid, try again\n");
     return(1);
   }
-
 }
