@@ -156,7 +156,27 @@ int setupVariables(
 
   if(global->help)
   {
-    printf("\n v6c13.c sound granulator works as follows:\n \n \tPlease supply options in order of: \n \t \t INPUT(wav/aif file) \n \t \t OUTPUT(wav/aif file) \n \t \t DURATION(seconds) \n \t \t MINIMUMGRAINLENGTH(seconds) \n \t \t MAXIMUMGRAINLENGTH(seconds) \n \t \t ATTACKLENGTH(percentage of grain duration) \n \t \t ATTACKDECAY(percentage of grain duration) \n \t \t GRAINDENSITY(number of grains per secondn)\n \n \t \t Example: \n \t \t \t (./)v6c13.out input.wav output.wav 20 0.2 0.4 10 10 40 \n \n \t Also, the following options may be useful: \n \t \t -h, --help \t \t Display's this dialogue \n \t \t -v, --verbose \t \t Run's the programme while updating the user via the command line. \n \t \t -i, --interactive \t Force the programme to ignore all other arguments (bar help) and request input from the user to produce an output \n \n");
+    printf("\
+	\n v6c13.c sound granulator works as follows:\
+	\n \
+	\n \tPlease supply options in order of: \
+	\n \t \t INPUT(wav/aif file) \
+	\n \t \t OUTPUT(wav/aif file) \
+	\n \t \t DURATION(seconds) \
+	\n \t \t MINIMUMGRAINLENGTH(seconds) \
+	\n \t \t MAXIMUMGRAINLENGTH(seconds) \
+	\n \t \t ATTACKLENGTH(percentage of grain duration) \
+	\n \t \t ATTACKDECAY(percentage of grain duration) \
+	\n \t \t GRAINDENSITY(number of grains per secondn)\
+	\n \
+	\n \t \t Example: \
+	\n \t \t \t (./)v6c13.out input.wav output.wav 20 0.2 0.4 10 10 40 \
+	\n \
+	\n \t Also, the following options may be useful: \
+	\n \t \t -h, --help \t \t Display's this dialogue \
+	\n \t \t -v, --verbose \t \t Run's the programme while updating the user via the command line. \
+	\n \t \t -i, --interactive \t Force the programme to ignore all other arguments (bar help) and request input from the user to produce an output \
+	\n \n");
     exit(0);
   }
   if(global->interactive)
@@ -374,9 +394,8 @@ int setupVariables(
   if(global->verbose == 1)
   {
     printf("\
-	\n \
-	Output: \n \
-	duration: \t \t %f \
+	\n Output: \
+	\n duration: \t \t \t %f \
 	\n \t minGrainDur: \t \t %f \
 	\n \t maxGrainDur: \t \t %f \
 	\n \t grainAttackPercent: \t %d \
