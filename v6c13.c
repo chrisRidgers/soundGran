@@ -70,8 +70,8 @@ int main(int argc, char *argv[])
 	grainStart[2 * i + 1] 	+= grain.panInfo.right * grain.buffer[i] * 0.5;
       }
 
-      output.step += output.stepSize;
-      //Increases step by stepsize for next grain
+      output.step += output.stepSize;   //Increases step by stepsize for next grain
+      				       
     } else
     {
       global.spaceLeft 	= 0;		//Prevents loop from running once finished
