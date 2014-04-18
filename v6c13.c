@@ -36,12 +36,13 @@ int main(int argc, char *argv[])
 	&global,
 	&initStruct) == -1) goto cleanup;
 
-  allocateOutputMem(&output, &global); 	//Setting up output buffer
+  if(allocateOutputMem(&output, &global) == -1) goto cleanup;
+      					//Setting up output buffer
 
   while(global.spaceLeft)
   {
-    allocateGrainMem(&grain, &global); 	//Setting up grain buffer
-    setupSeek(&grain, &global);         //Sets random seek for input file
+    if(allocateGrainMem(&grain, &global) == -1) goto cleanup; 	//Setting up grain buffer
+    if(setupSeek(&grain, &global) == -1) goto cleanup;         //Sets random seek for input file
 
     psf_sndSeek(  			//Sets seek for input file
 	grain.inputFile, 
@@ -53,9 +54,9 @@ int main(int argc, char *argv[])
 	grain.buffer, 
 	grain.numFrames);					   
 
-    impAttackEnv(&grain, &global); 	//Applies an attack envelope to reduce clipping
-    impDecayEnv(&grain, &global);	//Applies a decay envelope to reduce clipping
-    setGrainX(&grain, &global);		//Randomly determines a sound source position (stereo)
+    if(impAttackEnv(&grain, &global) == -1) goto cleanup; 	//Applies an attack envelope to reduce clipping
+    if(impDecayEnv(&grain, &global) == -1) goto cleanup;	//Applies a decay envelope to reduce clipping
+    if(setGrainX(&grain, &global) == -1 ) goto cleanup;		//Randomly determines a sound source position (stereo)
 
     if(output.NumFrames - output.step > grain.numFrames)
     {
@@ -77,8 +78,11 @@ int main(int argc, char *argv[])
       global.spaceLeft 	= 0;		//Prevents loop from running once finished
     }
 
-    free(grain.buffer);
-    grain.bufTest 	= 0;
+    if(grain.bufTest == -1)
+    {
+      free(grain.buffer);
+      grain.bufTest 	= 0;
+    }
   }
 
   if(global.verbose == 1) printf("\n ---------------------------------------------------------- \n Writing output file... \n");
@@ -89,7 +93,7 @@ int main(int argc, char *argv[])
 	output.NumFrames) != output.NumFrames)
   {
     printf("Warning: error writing %s\n", global.argv[ARG_OUTPUT]);
-    return 1;
+    return -1;
   }
 
   if(global.interactive == 1)
@@ -205,7 +209,7 @@ int setupVariables(
 	  return -1;
       }
     }
-
+    
     inputValid = 0;
     while(inputValid == 0)
     {
@@ -225,8 +229,14 @@ int setupVariables(
       }
     }
 
-    free(global->pattern);
-    global->patternTest = 0;
+    if(global->patternTest == 1)
+    {
+      free(global->pattern);
+      global->patternTest = 0;
+    } else
+    {
+      return -1;
+    }
 
     inputValid 		= 0;
     global->pattern 	= (char*) malloc(46 * sizeof(char));
@@ -287,8 +297,14 @@ int setupVariables(
 	  return -1;
       }
     }
+    if(global->patternTest == 1)
+    {
     free(global->pattern);
     global->patternTest = 0;
+    }else
+    {
+      return -1;
+    }
 
     inputValid 		= 0;
     global->pattern 	= (char*) malloc(17 * sizeof(char));
@@ -351,10 +367,22 @@ int setupVariables(
 	  return -1;
       }
     }
+    if(global->patternTest == 1)
+    {
     free(global->pattern);
     global->patternTest 	= 0;
+    }else
+    {
+      return -1;
+    }
+    if(global->userInputTest == 1)
+    {
     free(global->userInput);
     global->userInputTest 	= 0;
+    }else
+    {
+      return -1;
+    }
 
     output->bufTest 	= 0;
     grain->bufTest 	= 0;
