@@ -88,24 +88,18 @@ typedef struct INITPSF
   char *outputFile;
 } INITPSF;
 
-int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, OUTPUT *output, GLOBAL *global, int *optind);
 int setupVariables(GRAIN *grain, OUTPUT *output, GLOBAL *global, INITPSF *initStruct);
-int allocateGrainMem(GRAIN *grain, GLOBAL *global);
+int validate(GLOBAL *global, OUTPUT *output);
+int match(GLOBAL *global, OUTPUT *output);
+int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, OUTPUT *output, GLOBAL *global, int *optind);
+int initialisePSF(INITPSF *initStruct);
 int allocateOutputMem(OUTPUT *output, GLOBAL *global);
+int allocateGrainMem(GRAIN *grain, GLOBAL *global);
 int setGrainX(GRAIN *grain, GLOBAL *global);
 int setupSeek(GRAIN *grain, GLOBAL *global);
 int impAttackEnv(GRAIN *grain, GLOBAL *global);
 int impDecayEnv(GRAIN *grain, GLOBAL *global);
 int closePSF(INITPSF *initStruct);
-
 int cleanUp(GRAIN *grain, OUTPUT *output, GLOBAL *global, INITPSF *initStruct);
-
-int initialisePSF(INITPSF *initStruct);
-
-int match(GLOBAL *global, OUTPUT *output);
-
-int validate(GLOBAL *global, OUTPUT *output);
-
-
 
 #endif
