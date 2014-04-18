@@ -1,7 +1,17 @@
 #ifndef V6C13
 #define V6C13
 
-enum{ARG_NAME, ARG_INPUT, ARG_OUTPUT, ARG_DUR, ARG_MIN_GRAINDUR, ARG_MAX_GRAINDUR, ARG_GRAIN_ATTACK, ARG_GRAIN_DECAY, ARG_GRAIN_DENSITY, ARGC};
+enum{
+  ARG_NAME, 
+  ARG_INPUT, 
+  ARG_OUTPUT, 
+  ARG_DUR, 
+  ARG_MIN_GRAINDUR, 
+  ARG_MAX_GRAINDUR, 
+  ARG_GRAIN_ATTACK, 
+  ARG_GRAIN_DECAY, 
+  ARG_GRAIN_DENSITY, 
+  ARGC};
 
 enum{T_DEFAULT, T_INTERACTIVE};
 
@@ -88,10 +98,12 @@ typedef struct INITPSF
   char *outputFile;
 } INITPSF;
 
-int setupVariables(GRAIN *grain, OUTPUT *output, GLOBAL *global, INITPSF *initStruct);
+int setupVariables(GRAIN *grain, OUTPUT *output, 
+    GLOBAL *global, INITPSF *initStruct);
 int validate(GLOBAL *global, OUTPUT *output);
 int match(GLOBAL *global, OUTPUT *output);
-int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, OUTPUT *output, GLOBAL *global, int *optind);
+int setOverloadPSF(INITPSF *initStruct, GRAIN *grain, 
+    OUTPUT *output, GLOBAL *global, int *optind);
 int initialisePSF(INITPSF *initStruct);
 int allocateOutputMem(OUTPUT *output, GLOBAL *global);
 int allocateGrainMem(GRAIN *grain, GLOBAL *global);
