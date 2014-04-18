@@ -391,10 +391,40 @@ int setupVariables(
 
   } else {
     output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);
+    if(output->duration == 0.0)
+    {
+      printf("Check your arguments\n"); 
+      return -1;
+    }
+    
     global->minGrainDur 	= atof(global->argv[ARG_MIN_GRAINDUR + optind - 1]);
+    if(global->minGrainDur == 0.0)
+    {
+      printf("Check your arguments\n");
+      return -1;
+     }
+    
     global->maxGrainDur 	= atof(global->argv[ARG_MAX_GRAINDUR + optind - 1]);
+    if(global->maxGrainDur == 0.0) 
+    {
+      printf("Check your arguments\n"); 
+      return -1;
+    }
+    
     global->grainAttackPercent 	= atoi(global->argv[ARG_GRAIN_ATTACK + optind - 1]);
+    if(global->grainAttackPercent == 0) 
+    {
+      printf("Check your arguments\n"); 
+      return -1;
+    }
+    
     global->grainDecayPercent 	= atoi(global->argv[ARG_GRAIN_DECAY + optind - 1]);
+    if(global->grainDecayPercent == 0) 
+    {
+      printf("Check your arguments\n"); 
+      return -1;
+    }
+
     output->grainDensity 	= 1.0 / atof(global->argv[ARG_GRAIN_DENSITY + optind - 1]);
     output->bufTest 		= 0;
     grain->bufTest		= 0;
@@ -663,7 +693,7 @@ int initialisePSF(INITPSF *initStruct)
       initStruct->grain->inputFile = psf_sndOpen(initStruct->global->argv[ARG_INPUT + *(initStruct->optind) - 1], &initStruct->grain->inprop, 0);
       if(initStruct->grain->inputFile < 0)
       {
-	printf("Error, unable to read %s\n", initStruct->global->argv[ARG_INPUT + *(initStruct->optind) - 1]);
+	printf("Error, unable to read %s (check your file names) \n", initStruct->global->argv[ARG_INPUT + *(initStruct->optind) - 1]);
 	return -1;
       }
 
@@ -679,7 +709,7 @@ int initialisePSF(INITPSF *initStruct)
 
       if(initStruct->output->outputFile < 0)
       {
-	printf("Error, unable to create %s\n", initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1]);
+	printf("Error, unable to create %s (check your file names) \n", initStruct->global->argv[ARG_OUTPUT + *(initStruct->optind) - 1]);
 	return -1;
       }
 
