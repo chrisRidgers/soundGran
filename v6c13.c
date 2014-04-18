@@ -10,8 +10,8 @@
 
 int main(int argc, char *argv[])
 {
-  GLOBAL global 	= {							//Struct to hold global variables, keeps everything together
-    argv, 
+  GLOBAL global 	= {							//Struct to hold global variables, 
+    argv,                                                                       //keeps everything together
     argc,
     0,
     1, 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     0}; 	
 
   GRAIN grain;									//Struct to hold grain related variables
-  OUTPUT output 	= {0,0};						//Struct to hold variables affecting the output buffer
+  OUTPUT output 	= {0,0};						//Struct to hold ouput buffer variables
   INITPSF initStruct 	= {T_DEFAULT};
 
   if(setupVariables(
@@ -54,13 +54,13 @@ int main(int argc, char *argv[])
 	grain.buffer, 
 	grain.numFrames);					   
 
-    if(impAttackEnv(&grain, &global) == -1) goto cleanup;			//Applies an attack envelope to reduce clipping
-    if(impDecayEnv(&grain, &global) == -1) goto cleanup;		        //Applies a decay envelope to reduce clipping
-    if(setGrainX(&grain, &global) == -1 ) goto cleanup;				//Randomly determines a sound source position (stereo)
+    if(impAttackEnv(&grain, &global) == -1) goto cleanup;			//Attack envelope to reduce clipping
+    if(impDecayEnv(&grain, &global) == -1) goto cleanup;		        //Decay envelope to reduce clipping
+    if(setGrainX(&grain, &global) == -1 ) goto cleanup;				//Randomly stereo position 
 
     if(output.NumFrames - output.step > grain.numFrames)
     {
-      global.spaceLeft 	= 1;							//Just in case variable somehow becomes unset
+      global.spaceLeft 	= 1;							//Just in case variable is unset
 
       float *grainStart =  output.buffer + output.step * output.outprop.chans;             
       //Pointer to first frame of grain, adjusts by stepsize each loop 
@@ -71,11 +71,11 @@ int main(int argc, char *argv[])
 	grainStart[2 * i + 1] 	+= grain.panInfo.right * grain.buffer[i] * 0.5;
       }
 
-      output.step += output.stepSize;						//Increases step by stepsize for next grain
+      output.step += output.stepSize;						//Increases step for next grain
 
     } else
     {
-      global.spaceLeft 	= 0;							//Prevents loop from running once finished
+      global.spaceLeft 	= 0;							//Prevents loop from running 
     }
 
     if(grain.bufTest == -1)
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
   }
 
 cleanup:
-  cleanUp(									//Frees up memory buffers before programme exit
+  cleanUp(									//Frees up memory before programme exit
       &grain, 
       &output, 
       &global,
@@ -117,8 +117,8 @@ cleanup:
   return (0);
 }
 
-int setupVariables(								//Function to retrieve user input and initialise variables
-    GRAIN *grain, 
+int setupVariables(								//Retrieve input and initialise 
+    GRAIN *grain,                                                               //variables
     OUTPUT *output, 
     GLOBAL *global,
     INITPSF *initStruct)
@@ -190,19 +190,19 @@ int setupVariables(								//Function to retrieve user input and initialise vari
   }
   if(global->interactive)
   {
-    printf("Running interactively: \n \n");					//Sequentially requests user input, validates, and passes to variables
-
+    printf("Running interactively: \n \n");					//Sequentially requests user input,
+                                                                                //validates, and passes to variables
     initStruct->type 		= T_INTERACTIVE;
     global->userInput 		= (char*) malloc(_POSIX_NAME_MAX * 
-	sizeof(char));								//Allocates memory for user input using limits defined in limits.h
-    global->userInputTest 	= 1;						//For every buffer there is an int: 0 for buffer not allocated
-
-    int inputValid 		= 0;
+	sizeof(char));								//Allocates memory for user input using
+    global->userInputTest 	= 1;						//limits defined in limits.h
+                                                                                //For every buffer there is an int: 
+    int inputValid 		= 0;                                            //0 for buffer not allocated
     global->pattern 		= (char*) malloc(31 * sizeof(char));
     global->patternTest 	= 1;
     strncpy(global->pattern, 
 	"^[[:alnum:]]{1,64}(.wav$|.aif$)", 
-	31 * sizeof(char));							//Regular Expressions used validate user input
+	31 * sizeof(char));							//Regular expressions validate input
     while(inputValid == 0)
     {
       printf("Please enter a valid input file (less than 20 characters)\
@@ -210,8 +210,8 @@ int setupVariables(								//Function to retrieve user input and initialise vari
       switch(validate(global, output))
       {
 	case 0:
-	  sscanf(global->userInput, "%s", global->inputFile);			//Scanning input safe from buffer overflow through use of fgets and sscanf
-	  inputValid = 1;
+	  sscanf(global->userInput, "%s", global->inputFile);			//Input safe from buffer overflow 
+	  inputValid = 1;                                                       //through use of fgets and sscanf
 	  break;
 	case 1:
 	  break;
@@ -405,12 +405,12 @@ int setupVariables(								//Function to retrieve user input and initialise vari
 
     printf("\n");
 
-  } else {									//When run none interactively, variables are pulled from argv
-    output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);	//getopt's optind used to indicate starting value for *next* argument
-    if(output->duration == 0.0)							//value offset by variables enum value and - 1 to locate correct argument
-    {
-      printf("Check your arguments\n"); 
-      return (-1);
+  } else {									//When run none interactively, variables
+    output->duration 		= atof(global->argv[ARG_DUR + optind - 1]);	//are pulled from argv. getopt's optind 
+    if(output->duration == 0.0)							//used to indicate starting value for 
+    {                                                                           //*next* argument value offset by 
+      printf("Check your arguments\n");                                         //variables enum value and - 1 to 
+      return (-1);                                                              //locate correct argument
     }
 
     global->minGrainDur 	= atof(global->argv[ARG_MIN_GRAINDUR + 
@@ -458,18 +458,18 @@ int setupVariables(								//Function to retrieve user input and initialise vari
     sleep(2);
   }
 
-  setOverloadPSF(								//Using a struct and set overload function to implement
-      initStruct,								//overloading for psf_init().  Dependant on interactive mode
-      grain, 
+  setOverloadPSF(								//Using a struct and set overload 
+      initStruct,								//function to implement overloading for 
+      grain,                                                                    //psf_init().  Dependant on interactive
       output, 
       global, 
       &optind);
 
-  if(initialisePSF(initStruct) == -1 ) return (-1);				//Init Struct itself holds pointers to global, and output structs
-  output->stepSize 		= output->grainDensity * output->outprop.srate;											    
+  if(initialisePSF(initStruct) == -1 ) return (-1);				//Init Struct itself holds pointers to 
+  output->stepSize 		= output->grainDensity * output->outprop.srate;	//global, and output structs     									    
 
-  if(global->verbose == 1)							//The verbose flag just makes the programme talk a lot
-  {
+  if(global->verbose == 1)							//The verbose flag just makes the 
+  {                                                                             //programme talk a lot
     printf("\
 	\n Output: \
 	\n duration: \t \t \t %f \
@@ -493,8 +493,8 @@ int setupVariables(								//Function to retrieve user input and initialise vari
   return (0);
 }
 
-int validate(GLOBAL *global, OUTPUT *output)					//Checks user input for endline character and null terminates it
-{
+int validate(GLOBAL *global, OUTPUT *output)					//Checks user input for endline 
+{                                                                               //character and null terminates it
   if(fgets(global->userInput, _POSIX_NAME_MAX * sizeof(char), stdin) != NULL)
   {
     char *endline = strchr(global->userInput,'\n');
@@ -507,12 +507,12 @@ int validate(GLOBAL *global, OUTPUT *output)					//Checks user input for endline
   }else
   {
     printf("Input not valid, try again\n");
-    return(1);									//Even though failed, does not return -1 due to needing programme to continue
-  }
+    return(1);									//Even though failed, does not return -1 
+  }                                                                             //due to needing programme to continue
 }
 
-int match(GLOBAL *global, OUTPUT *output)					//Computs reexec object, and checks if user input matches
-{
+int match(GLOBAL *global, OUTPUT *output)					//Computes regex object, and checks if 
+{                                                                               //user input matches
   int status;
 
   if(regcomp(
@@ -560,8 +560,8 @@ int setOverloadPSF(								//function defines INITPSF struct variables based on 
   return (0);
 }
 
-int initialisePSF(INITPSF *initStruct)						//accepts and INITPSF argument and reacts to it accordingly
-{ 
+int initialisePSF(INITPSF *initStruct)						//accepts and INITPSF argument and 
+{                                                                               //reacts to it accordingly
   if(psf_init())
   {
     printf("Error: unable to open portsf\n");
@@ -713,9 +713,9 @@ int allocateGrainMem(GRAIN *grain, GLOBAL *global)
   return (0);
 }
 
-int setGrainX(GRAIN *grain, GLOBAL *global)					//Constant power pan function, returns left / right
-{										//values to a pan info struct within a grain struct
-  grain->panInfo.grainX = (-1.0f) + 
+int setGrainX(GRAIN *grain, GLOBAL *global)					//Constant power pan function, returns 
+{										//left / right values to a pan info 
+  grain->panInfo.grainX = (-1.0f) +                                             //struct within a grain struct
     (float) rand() / ((float) (RAND_MAX/(1.0-(-1.0))));
   grain->panInfo.left 	= (sqrt(2.0) / 2) * 
     (cos(grain->panInfo.grainX) - sin(grain->panInfo.grainX)) * 0.5;
@@ -790,8 +790,8 @@ int impDecayEnv(GRAIN* grain, GLOBAL *global)
   return (0);
 }
 
-int closePSF(INITPSF *initStruct)						//This function is also overloaded using an INITPSF struct
-{
+int closePSF(INITPSF *initStruct)						//This function is also overloaded using
+{                                                                               //an INITPSF struct
   switch(initStruct->type)
   {
     case T_DEFAULT:
@@ -853,10 +853,10 @@ int closePSF(INITPSF *initStruct)						//This function is also overloaded using 
   return (0);
 }
 
-int cleanUp(									//Checks to see which buffers are allocated and deallocates them
-    GRAIN *grain, 								//checks needed to prevent deallocation errors if programme fails
-    OUTPUT *output, 
-    GLOBAL *global,
+int cleanUp(									//Checks to see which buffers are 
+    GRAIN *grain, 								//allocated and deallocates them. 
+    OUTPUT *output,                                                             //checks needed to prevent deallocation 
+    GLOBAL *global,                                                             //errors if programme fails
     INITPSF *initStruct)
 {
   if(output->bufTest) 
